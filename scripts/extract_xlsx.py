@@ -13,6 +13,12 @@ def extract(xlsx_path: str, output_dir: str = "output"):
     df = pd.read_csv(xlsx) if ext == ".csv" else pd.read_excel(xlsx)
 
     records = df.where(pd.notnull(df), None).to_dict(orient="records")
+    import math
+    records = [
+        {k: None if isinstance(v, float) and math.isnan(v) else v
+         for k, v in row.items()}
+        for row in records
+    ]
 
     json_path = out / f"{xlsx.stem}.batch.json"
     json_path.write_text(

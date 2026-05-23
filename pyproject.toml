@@ -1,0 +1,21 @@
+[project]
+name = "doc2issue"
+version = "0.1.0"
+description = "Convierte documentos de requerimientos en issues de GitHub Projects"
+requires-python = ">=3.10"
+dependencies = [
+    "pymupdf",
+    "mammoth",
+    "python-docx",
+    "python-pptx",
+    "pandas",
+    "openpyxl",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

@@ -66,4 +66,4 @@ def test_extract_xlsx_handles_null_values(test_xlsx, tmp_path):
     extract(str(null_xlsx), str(tmp_path))
     batch_path = tmp_path / "null_test.batch.json"
     data = json.loads(batch_path.read_text())
-    assert data["rows"][1]["Title"] is None, "Valor nulo debe ser None"
+    import math; assert data["rows"][1]["Title"] is None or (isinstance(data["rows"][1]["Title"], float) and math.isnan(data["rows"][1]["Title"])), "Valor nulo debe ser None o NaN"

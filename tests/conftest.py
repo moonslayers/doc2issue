@@ -17,12 +17,16 @@ def test_pdf(tmp_path):
     page.insert_text((50, 80), "Prioridad: Alta", fontsize=10)
     page.insert_text((50, 110), "Criterios de aceptación:", fontsize=10)
 
-    # Crear una imagen simple (rectángulo rojo) para incrustar
-    pix = fitz.Pixmap(fitz.csRGB, 100, 100, True)
-    pix.set_rect(pix.irect, (255, 0, 0))
+    # Crear una imagen simple (rectángulo rojo) usando página auxiliar
+    img_doc = fitz.open()
+    img_page = img_doc.new_page(width=100, height=100)
+    img_page.draw_rect((0, 0, 100, 100), color=(1, 0, 0), fill=(1, 0, 0))
+    pix = img_page.get_pixmap()
     img_bytes = pix.tobytes("png")
+    img_doc.close()
 
-    page.insert_image(fitz.Rect(50, 140, 150, 240), stream=img_bytes)
+    # Incrustar la imagen en la página principal
+    page.insert_image((50, 140, 150, 240), stream=img_bytes)
 
     pdf_path = tmp_path / "test.pdf"
     doc.save(str(pdf_path))
