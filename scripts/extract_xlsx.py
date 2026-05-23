@@ -12,11 +12,19 @@ def extract(xlsx_path: str, output_dir: str = "output"):
     ext = xlsx.suffix.lower()
     df = pd.read_csv(xlsx) if ext == ".csv" else pd.read_excel(xlsx)
 
+    import math, datetime
+    def safe_val(v):
+        if isinstance(v, float) and math.isnan(v):
+            return None
+        if isinstance(v, datetime.datetime) or isinstance(v, datetime.date):
+            return v.isoformat()
+        if isinstance(v, datetime.time):
+            return v.strftime("%H:%M:%S")
+        return v
+
     records = df.where(pd.notnull(df), None).to_dict(orient="records")
-    import math
     records = [
-        {k: None if isinstance(v, float) and math.isnan(v) else v
-         for k, v in row.items()}
+        {k: safe_val(v) for k, v in row.items()}
         for row in records
     ]
 
