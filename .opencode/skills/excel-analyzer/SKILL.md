@@ -7,11 +7,11 @@ description: "Use for `.xlsx`, `.xls`, `.csv` files in `docs/`. Convert tabular 
 ## Input
 - **Archivo**: `docs/<archivo>.xlsx`, `.xls`, o `.csv`
 - **Script**: `scripts/extract_xlsx.py`
-- **Dependencias**: `pandas`, `openpyxl` (instalado vía `uv tool install pandas openpyxl`)
+- **Dependencias**: `pandas`, `openpyxl` (instalado vía `uv sync` (ver pyproject.toml) pandas openpyxl`)
 
 ## Extracción
 ```bash
-python3 scripts/extract_xlsx.py docs/archivo.xlsx
+uv run python3 scripts/extract_xlsx.py docs/archivo.xlsx
 ```
 Esto genera `output/<archivo>.batch.json` con:
 - `rows[]`: array de objetos, cada fila del Excel es un registro
@@ -70,7 +70,7 @@ Cada fila se convierte en un objeto dentro de `rows[]`. Luego el analyzer genera
 ## Ejemplo concreto
 ```
 docs/backlog-sprint-24.xlsx
-→ python3 scripts/extract_xlsx.py docs/backlog-sprint-24.xlsx
+→ uv run python3 scripts/extract_xlsx.py docs/backlog-sprint-24.xlsx
 → batch.json: 15 filas con columnas Title, Description, Priority, Size
 → analyzer genera 15 issues, uno por fila
 → JSON batch en output/backlog-sprint-24.batch.json

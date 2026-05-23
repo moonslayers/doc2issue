@@ -7,11 +7,11 @@ description: "Use when processing `.pdf` files in `docs/`. Extract text and imag
 ## Input
 - **Archivo**: `docs/<archivo>.pdf`
 - **Script**: `scripts/extract_pdf.py`
-- **Dependencias**: `pymupdf` (instalado vía `uv tool install pymupdf`)
+- **Dependencias**: `pymupdf` (instalado vía `uv sync` (ver pyproject.toml) pymupdf`)
 
 ## Extracción
 ```bash
-python3 scripts/extract_pdf.py docs/archivo.pdf
+uv run python3 scripts/extract_pdf.py docs/archivo.pdf
 ```
 Esto genera `output/<archivo>.manifest.json` con estos campos:
 - `text_file`: ruta al archivo .txt con el texto extraído
@@ -76,7 +76,7 @@ Esto genera `output/<archivo>.manifest.json` con estos campos:
 ## Ejemplo concreto
 ```
 docs/login-oauth.pdf
-→ python3 scripts/extract_pdf.py docs/login-oauth.pdf
+→ uv run python3 scripts/extract_pdf.py docs/login-oauth.pdf
 → manifest: 3 páginas, 2 imágenes
 → analyzer extrae: title="Login con Google OAuth", description="..."
 → JSON final guardado en output/login-oauth.issue.json

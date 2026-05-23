@@ -7,11 +7,11 @@ description: "Use for `.docx` files in `docs/`. Convert to Markdown and extract 
 ## Input
 - **Archivo**: `docs/<archivo>.docx`
 - **Script**: `scripts/extract_docx.py`
-- **Dependencias**: `mammoth`, `python-docx` (instalado vía `uv tool install mammoth python-docx`)
+- **Dependencias**: `mammoth`, `python-docx` (instalado vía `uv sync` (ver pyproject.toml) mammoth python-docx`)
 
 ## Extracción
 ```bash
-python3 scripts/extract_docx.py docs/archivo.docx
+uv run python3 scripts/extract_docx.py docs/archivo.docx
 ```
 Esto genera `output/<archivo>.manifest.json` con estos campos:
 - `markdown_file`: ruta al archivo .md convertido
@@ -71,7 +71,7 @@ Esto genera `output/<archivo>.manifest.json` con estos campos:
 ## Ejemplo concreto
 ```
 docs/especificacion-pagos.docx
-→ python3 scripts/extract_docx.py docs/especificacion-pagos.docx
+→ uv run python3 scripts/extract_docx.py docs/especificacion-pagos.docx
 → manifest: markdown_file, 0 imágenes
 → title="Especificación Módulo de Pagos", description="..."
 → JSON en output/especificacion-pagos.issue.json

@@ -1,6 +1,6 @@
 ---
 description: Especialista en analizar imágenes, mockups, diagramas y capturas extraídas de documentos de requerimientos.
-mode: primary
+mode: subagent
 model: openrouter/qwen/qwen3.5-flash-02-23
 color: warning
 temperature: 0.2

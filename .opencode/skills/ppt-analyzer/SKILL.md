@@ -7,11 +7,11 @@ description: "Use for `.pptx` files in `docs/`. Extract slides, presenter notes 
 ## Input
 - **Archivo**: `docs/<archivo>.pptx`
 - **Script**: `scripts/extract_pptx.py`
-- **Dependencias**: `python-pptx` (instalado vía `uv tool install python-pptx`)
+- **Dependencias**: `python-pptx` (instalado vía `uv sync` (ver pyproject.toml) python-pptx`)
 
 ## Extracción
 ```bash
-python3 scripts/extract_pptx.py docs/archivo.pptx
+uv run python3 scripts/extract_pptx.py docs/archivo.pptx
 ```
 Esto genera `output/<archivo>.manifest.json` con estos campos:
 - `markdown_file`: ruta al .md con texto de slides + notas del presentador
@@ -70,7 +70,7 @@ Esto genera `output/<archivo>.manifest.json` con estos campos:
 ## Ejemplo concreto
 ```
 docs/dashboard-feature.pptx
-→ python3 scripts/extract_pptx.py docs/dashboard-feature.pptx
+→ uv run python3 scripts/extract_pptx.py docs/dashboard-feature.pptx
 → manifest: 12 slides, 5 imágenes, notas del slide 8 tienen detalles técnicos
 → title="Nuevo Dashboard", description incluye notas del presentador
 → JSON en output/dashboard-feature.issue.json
