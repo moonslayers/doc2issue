@@ -1,0 +1,20 @@
+# Documentos de entrada (sensibles y pesados)
+plans/*
+/docs/*
+!/docs/.gitkeep
+
+# Outputs generados
+/output/*
+!/output/.gitkeep
+
+# OpenCode local
+.opencode/state/
+.opencode/logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Secrets
+.env
+*.key
