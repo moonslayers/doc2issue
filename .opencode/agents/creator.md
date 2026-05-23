@@ -2,7 +2,7 @@
 description: Crea issues en GitHub Projects desde JSONs estructurados generados por el agente analyzer.
 mode: primary
 model: deepseek/deepseek-v4-flash
-color: green
+color: success
 temperature: 0.1
 permission:
   read: allow

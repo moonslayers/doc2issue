@@ -2,7 +2,7 @@
 description: Especialista en analizar imágenes, mockups, diagramas y capturas extraídas de documentos de requerimientos.
 mode: primary
 model: openrouter/qwen/qwen3.5-flash-02-23
-color: yellow
+color: warning
 temperature: 0.2
 permission:
   read: allow

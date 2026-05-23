@@ -2,7 +2,7 @@
 description: Analiza documentos de requerimientos y orquesta la extracción de información hacia issues de GitHub.
 mode: primary
 model: deepseek/deepseek-v4-flash
-color: blue
+color: accent
 temperature: 0.3
 permission:
   read: allow
