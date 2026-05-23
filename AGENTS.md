@@ -22,6 +22,11 @@ docs/archivo.pdf
 | vision | Qwen 3.5 Flash | Analiza imágenes | `images/*.png` → `images/*.json` |
 | creator | DeepSeek Chat | Crea issues | `*.issue.json` → GitHub Issue |
 
+## Skills disponibles
+
+Cada formato tiene su skill en `.opencode/skills/`:
+`pdf-analyzer` · `word-parser` · `ppt-analyzer` · `excel-analyzer` · `issue-creator`
+
 ## Pipeline Rápido
 
 1. `/agent analyzer` → "Analiza docs/midoc.pdf"
@@ -31,6 +36,12 @@ docs/archivo.pdf
 ## Dependencias
 
 ```bash
-sudo pacman -S github-cli poppler pandoc jq
+# Sistema (solo github-cli)
+sudo pacman -S github-cli
+
+# Python (vía uv)
+uv tool install pymupdf mammoth python-docx python-pptx pandas openpyxl
+
+# Autenticación
 gh auth login
 ```

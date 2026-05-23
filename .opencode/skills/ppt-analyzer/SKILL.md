@@ -1,29 +1,77 @@
 ---
 name: ppt-analyzer
-description: "Use for `.pptx` files: extract slides and presenter notes, export slides as images for analysis."
+description: "Use for `.pptx` files in `docs/`. Extract slides, presenter notes and images via Python script `scripts/extract_pptx.py` using python-pptx."
 ---
 # PPT Analyzer
 
-## Cuándo usar
-Archivos `.pptx` en `docs/`. Típicamente presentaciones de proyectos o features.
+## Input
+- **Archivo**: `docs/<archivo>.pptx`
+- **Script**: `scripts/extract_pptx.py`
+- **Dependencias**: `python-pptx` (instalado vía `uv tool install python-pptx`)
 
-## Proceso
+## Extracción
+```bash
+python3 scripts/extract_pptx.py docs/archivo.pptx
+```
+Esto genera `output/<archivo>.manifest.json` con estos campos:
+- `markdown_file`: ruta al .md con texto de slides + notas del presentador
+- `slides`: número total de slides
+- `images[]`: lista de rutas a imágenes extraídas
 
-1. Extraer slide por slide usando python-pptx:
-   ```python
-   from pptx import Presentation
-   prs = Presentation('docs/archivo.pptx')
-   for i, slide in enumerate(prs.slides):
-       for shape in slide.shapes:
-           if hasattr(shape, 'text'):
-               print(f'Slide {i+1}: {shape.text}')
-   ```
+## Reglas de negocio (qué buscar en el texto)
 
-2. Guardar cada slide como imagen en `output/images/slide_<n>.png`
+| Campo | Señales en el texto (slides + notas) | Obligatorio |
+|-------|-------------------------------------|:-----------:|
+| **title** | Título del primer slide, texto del slide principal, "Proyecto:", "Feature:" | ✅ |
+| **description** | Contenido de los slides de detalle, **notas del presentador** (¡muy importantes!) | ✅ |
+| **acceptance_criteria** | Slides con viñetas numeradas, secciones "Requerimientos", "Requirements", "AC" | ❌ |
+| **priority** | "Alta/Media/Baja" en slides o notas, colores en diagramas (rojo=alta, verde=baja) | ❌ |
+| **size** | "S/M/L/XL" mencionado | ❌ |
+| **stakeholders** | Nombres en notas del presentador, "PO:", "Cliente:" | ❌ |
 
-3. Extraer notas del presentador (suelen tener detalles adicionales)
+> Las **notas del presentador** suelen contener la información más valiosa: detalles técnicos, decisiones de diseño, y requirements que no están en los slides. No las ignores.
 
-4. Delegar imágenes al agente `vision`
+## Output contract
+```json
+{
+  "source": "docs/presentacion.pptx",
+  "title": "string (requerido)",
+  "description": "string (requerido)",
+  "acceptance_criteria": ["string"],
+  "priority": "string",
+  "size": "string",
+  "estimate_hours": "number",
+  "labels": ["string"],
+  "images": [
+    {
+      "path": "string",
+      "caption": "string",
+      "analysis": "string"
+    }
+  ],
+  "stakeholders": ["string"],
+  "questions_for_pm": ["string"]
+}
+```
 
-## Output
-JSON en `output/<nombre>.issue.json`
+## Edge cases
+| Caso | Qué hacer |
+|------|-----------|
+| **PPTX sin notas** | Analizar solo slides, no generar advertencia |
+| **Solo imágenes (sin texto)** | `images` tendrá las imágenes, delegar a vision |
+| **Muchos slides (>30)** | Priorizar los primeros 5 y el último (suelen tener resumen) |
+| **Slide master vs contenido** | Ignorar texto repetitivo de layouts/navegación |
+
+## Validación del output
+- `source` debe existir en disco
+- `title` no puede estar vacío
+- Verificar que slides del manifest coinciden con el markdown generado
+
+## Ejemplo concreto
+```
+docs/dashboard-feature.pptx
+→ python3 scripts/extract_pptx.py docs/dashboard-feature.pptx
+→ manifest: 12 slides, 5 imágenes, notas del slide 8 tienen detalles técnicos
+→ title="Nuevo Dashboard", description incluye notas del presentador
+→ JSON en output/dashboard-feature.issue.json
+```

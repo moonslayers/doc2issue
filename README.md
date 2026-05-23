@@ -2,97 +2,72 @@
 
 > Automatiza la conversión de documentos de requerimientos en issues de GitHub Projects.
 
-## 🎯 ¿Qué es doc2issue?
+## 🎯 ¿Qué es?
 
-doc2issue es una herramienta que toma documentos de requerimientos (PDF, Word, PPT, Excel) y los convierte en issues estructurados de GitHub Projects. Usa una pipeline de 3 agentes OpenCode con modelos de OpenRouter para extraer texto, analizar imágenes/mockups, y crear issues directamente desde tu terminal.
+doc2issue toma documentos de requerimientos (PDF, Word, PPT, Excel) y los convierte en issues estructurados de GitHub Projects. Usa 3 agentes OpenCode con modelos de OpenRouter para extraer texto, analizar imágenes/mockups, y crear issues directamente desde tu terminal.
 
-Está diseñada para equipos que reciben requerimientos en formatos de documento y necesitan volcarlos a GitHub de forma rápida y consistente, sin copiar y pegar manualmente.
+Diseñada para equipos que reciben requerimientos en documentos y necesitan volcarlos a GitHub de forma rápida y consistente.
 
 ## 🚀 Quick Start
 
-1. Coloca tu documento en `docs/`:
-   ```bash
-   cp ~/documento.pdf docs/
-   ```
-2. En OpenCode: `/agent analyzer` → `Analiza docs/documento.pdf`
-3. En OpenCode: `/agent creator` → `Crea issue desde output/documento.issue.json`
-4. ¡Issue creado en GitHub!
+```bash
+# 1. Coloca tu documento en docs/
+cp ~/documento.pdf docs/
 
-## 🔄 Flujo de Conversión
+# 2. En OpenCode, invoca al analyzer
+/agent analyzer
+> Analiza docs/documento.pdf
 
-```
-docs/requerimiento.pdf
-    ↓ [analyzer] DeepSeek extrae texto + imágenes
-output/requerimiento.txt + output/images/*.png
-    ↓ [vision] Qwen 3.5 Flash analiza imágenes
-output/images/*.json
-    ↓ [analyzer] consolida todo
-output/requerimiento.issue.json
-    ↓ [creator] previa confirmación
-GitHub Issue con imágenes adjuntas
+# 3. Revisa el JSON generado en output/
+# 4. Crea el issue
+/agent creator
+> Crea issue desde output/documento.issue.json
 ```
 
-## ⚙️ Setup & Configuración
+## 🔄 Pipeline
 
-### Dependencias (CachyOS)
+```
+docs/archivo.pdf → [analyzer] → output/*.issue.json → [creator] → GitHub Issue
+```
+
+Cada formato tiene una skill dedicada en `.opencode/skills/` que contiene las reglas de extracción, análisis y generación del JSON.
+
+## ⚙️ Setup
 
 ```bash
-sudo pacman -S github-cli poppler pandoc jq
-```
+# Sistema (solo github-cli)
+sudo pacman -S github-cli
 
-### Autenticación
+# Python (vía uv)
+uv tool install pymupdf mammoth python-docx python-pptx pandas openpyxl
 
-```bash
+# Autenticación
 gh auth login
 ```
-
-### API Key OpenRouter
-
-Agrega tu API key en `~/.config/opencode/config.json` o como variable de entorno `OPENROUTER_API_KEY`.
 
 ## 🤖 Agentes
 
 | Agente | Modelo | Rol |
 |--------|--------|-----|
-| analyzer | DeepSeek Chat | Analiza texto y orquesta el flujo |
+| analyzer | DeepSeek Chat | Orquesta extracción y genera JSON |
 | vision | Qwen 3.5 Flash | Analiza imágenes y mockups |
 | creator | DeepSeek Chat | Crea issues en GitHub |
 
-## 📁 Estructura del Proyecto
+Para más detalles, ver [`AGENTS.md`](AGENTS.md) y las skills en `.opencode/skills/`.
+
+## 📁 Estructura
 
 ```
 doc2issue/
-├── .opencode/
-│   ├── agents/          → Configuración de agentes
-│   └── commands/        → Comandos rápidos
-├── skills/              → Skills por tipo de documento
-├── templates/           → Plantillas de issues
-├── docs/                → Documentos de entrada (gitignored)
-├── output/              → JSONs generados (gitignored)
-├── plans/               → Planes de implementación
-├── .gitignore
-├── AGENTS.md
-└── README.md
-```
-
-## 📝 Ejemplos de Uso
-
-### Analizar un PDF
-
-```bash
-cp ~/Downloads/requerimiento.pdf docs/
-# En OpenCode: /agent analyzer > "Analiza docs/requerimiento.pdf"
-```
-
-### Analizar un Excel (backlog)
-
-```bash
-cp ~/Downloads/backlog.xlsx docs/
-# Genera un issue por cada fila
+├── .opencode/    → Agentes, comandos y skills
+├── scripts/      → Scripts Python de extracción
+├── templates/    → Plantillas de issues
+├── docs/         → Documentos de entrada
+├── output/       → JSONs generados
+├── tests/        → Suite de pruebas
+└── plans/        → Planes de implementación
 ```
 
 ## 📄 Licencia
 
-Ver archivo `LICENSE`.
-
-> **🚧 Nota**: Este proyecto está en fase de construcción. Los agentes se configuran en etapas posteriores. Para ver el diseño completo, revisa [`plans/`](plans/).
+Ver [`LICENSE`](LICENSE).

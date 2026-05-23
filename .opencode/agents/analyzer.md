@@ -22,85 +22,35 @@ Eres el orquestador principal. Analizas documentos de requerimientos (PDF, Word,
 file docs/<archivo>
 ```
 
-### 2. Extraer contenido según tipo
+### 2. Usar la skill correspondiente
 
-**PDF mixto (texto + imágenes):**
-```bash
-# Extraer texto
-pdftotext docs/archivo.pdf output/archivo.txt
+Cada formato tiene una skill dedicada con instrucciones detalladas de extracción, reglas de negocio, y formato de output:
 
-# Extraer imágenes
-mkdir -p output/images
-pdfimages -png docs/archivo.pdf output/images/archivo
-```
+| Extensión | Skill | Script |
+|-----------|-------|--------|
+| `.pdf` | pdf-analyzer | scripts/extract_pdf.py |
+| `.docx` | word-parser | scripts/extract_docx.py |
+| `.pptx` | ppt-analyzer | scripts/extract_pptx.py |
+| `.xlsx`, `.xls`, `.csv` | excel-analyzer | scripts/extract_xlsx.py |
 
-**Word:**
-```bash
-pandoc docs/archivo.docx -t markdown -o output/archivo.md
-```
-
-**PPT:**
-```bash
-# Extraer slide por slide usando python-pptx
-python3 -c "
-from pptx import Presentation
-prs = Presentation('docs/archivo.pptx')
-for i, slide in enumerate(prs.slides):
-    for shape in slide.shapes:
-        if hasattr(shape, 'text'):
-            print(f'Slide {i+1}: {shape.text}')
-"
-```
-
-**Excel:**
-```bash
-# Detectar si es tabla de requerimientos
-python3 -c "
-import pandas as pd
-df = pd.read_excel('docs/archivo.xlsx')
-print('Columnas:', list(df.columns))
-print('Filas:', len(df))
-"
-```
+La skill se carga automáticamente por keywords. Sigue sus pasos:
+1. Ejecuta el script de extracción (genera un `manifest.json`)
+2. Aplica las reglas de negocio de la skill para identificar título, descripción, criterios, etc.
+3. Revisa los edge cases documentados en la skill
 
 ### 3. Delegar imágenes al agente vision
 
-Por cada imagen extraída en `output/images/`, invoca al agente `vision` para analizarla. El vision agent devolverá JSONs en `output/images/*.json`.
+Por cada imagen listada en `manifest.images`, invoca al agente `vision`. El vision agent devolverá JSONs en `output/images/*.json`.
 
-### 4. Consolidar
+### 4. Consolidar en JSON final
 
-Combina:
-- Texto extraído
-- Análisis de imágenes (del vision agent)
-- Metadata del documento
+Combina texto extraído + análisis de imágenes + metadata del documento siguiendo el **output contract** definido en la skill.
 
-En un JSON final en `output/<nombre>.issue.json`:
-
-```json
-{
-  "source": "docs/requerimiento.pdf",
-  "title": "Login con Google OAuth",
-  "description": "...",
-  "acceptance_criteria": ["..."],
-  "priority": "high",
-  "size": "M",
-  "estimate_hours": 8,
-  "labels": ["auth", "oauth"],
-  "images": [
-    {
-      "path": "output/images/page1_fig1.png",
-      "caption": "Mockup de pantalla de login",
-      "analysis": "output/images/page1_fig1.json"
-    }
-  ],
-  "stakeholders": ["@pm"],
-  "questions_for_pm": ["..."]
-}
-```
+Guarda el resultado en `output/<nombre>.issue.json`.
 
 ## Reglas
 
 - NUNCA crees el issue directamente, solo genera el JSON
 - SIEMPRE guarda el output en `output/`
-- Si el documento es ambiguo, genera preguntas en `"questions_for_pm": [...]`
-- Preserva imágenes originales para adjuntarlas al issue después
+- Si el documento es ambiguo, genera preguntas en `"questions_for_pm"`
+- Si la extensión no está en la tabla de skills, preguntar al usuario qué formato es
