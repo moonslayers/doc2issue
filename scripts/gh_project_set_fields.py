@@ -44,6 +44,13 @@ def _get_project_fields(project_id: str) -> list[dict]:
     return json.loads(r)
 
 
+def _item_exists(project_id: str, issue_node_id: str) -> bool:
+    """Verifica si el issue ya está en el project (evita duplicados)."""
+    q = 'query{node(id:"' + project_id + '"){...on ProjectV2{items(first:100){nodes{content{...on Issue{id}}}}}}}'
+    r = _run_gh(["gh","api","graphql","-f",f"query={q}","--jq",".data.node.items.nodes[].content.id"])
+    return issue_node_id in r.splitlines()
+
+
 def _add_item_to_project(project_id: str, issue_node_id: str) -> str:
     """Agrega issue al proyecto via GraphQL, retorna item ID."""
     q = 'mutation{addProjectV2ItemById(input:{projectId:"' + project_id + '" contentId:"' + issue_node_id + '"}){item{id}}}'
@@ -93,9 +100,17 @@ def set_fields(project: int, owner: str, item_number: int,
     for f in proj_fields:
         field_map[f.get("name", "").lower()] = f
 
-    # 3. Agregar item al proyecto
-    print("  Agregando al proyecto...", file=sys.stderr)
-    item_id = _add_item_to_project(project_id, issue_node_id)
+    # 3. Agregar item al proyecto (idempotente)
+    if _item_exists(project_id, issue_node_id):
+        print("  ⚠️  Issue ya está en el project, saltando add", file=sys.stderr)
+        # Obtener item ID existente para setear campos después
+        q = 'query{node(id:"' + project_id + '"){...on ProjectV2{items(first:100){nodes{id content{...on Issue{id}}}}}}}'
+        r = _run_gh(["gh","api","graphql","-f",f"query={q}","--jq",".data.node.items.nodes[] | select(.content.id==\"" + issue_node_id + '\") | .id'])
+        item_id = r.strip()
+        print(f"  ✅ Item ID existente: {item_id}", file=sys.stderr)
+    else:
+        print("  Agregando al proyecto...", file=sys.stderr)
+        item_id = _add_item_to_project(project_id, issue_node_id)
     if not item_id:
         results["error"] = "No se pudo agregar item al proyecto"
         print("  ❌ Falló", file=sys.stderr)
