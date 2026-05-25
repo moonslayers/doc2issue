@@ -1,6 +1,6 @@
 ---
 name: issue-creator
-description: "Use when creating GitHub issues from structured JSON files. Covers `gh issue create`, embedding images as data URIs, listing repos/projects, project metrics. Uses Python scripts in `scripts/` (tested with 49 tests)."
+description: "Use when creating GitHub issues from structured JSON files. Creates issues, matches labels, uploads images, sets project fields via Python scripts. Covers `gh issue create`, embedding images as data URIs, listing repos/projects, project metrics. Uses Python scripts in `scripts/` (tested with 49 tests)."
 ---
 # Issue Creator
 
@@ -145,7 +145,10 @@ manejo de errores y cargan configuración desde .
 | `gh_list_projects.py` | Lista proyectos del owner/repo | `gh project list` manual |
 | `gh_project_metrics.py` | Métricas de un project (status, priority, size, recent) | `gh project view` + GraphQL manual |
 | `gh_project_repos.py` | Repositorios vinculados a un project (con paginación) | GraphQL manual sin paginación |
-| `embed_images.py` | Convierte imágenes a data URIs en el body del issue | `base64` manual + template |
+| `embed_images.py` | Convierte imágenes a data URIs o las sube al repo si el body es >65KB | `base64` manual + template |
+| `gh_match_labels.py` | Mapea labels del JSON a labels existentes del repo por similitud | `gh label create` manual |
+| `gh_upload_images.py` | Sube imágenes al repo vía Content API (evita límite 65KB) | Subir imágenes manualmente |
+| `gh_project_set_fields.py` | Agrega issue a proyecto y setea campos custom | GraphQL manual |
 
 Uso general:
 ```bash
