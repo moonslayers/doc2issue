@@ -48,7 +48,7 @@ def fetch_repo_labels(repo: str) -> list[dict]:
 
 
 def match_labels(desired: list[str], repo: str,
-                 threshold: float = 0.4) -> dict:
+                 threshold: float = 0.7) -> dict:
     """Mapea labels deseados a labels existentes del repo.
 
     Retorna:
@@ -100,8 +100,8 @@ def main():
     parser.add_argument("--repo", required=True, help="owner/repo")
     parser.add_argument("--labels", required=True,
                         help='JSON array: ["lab1","lab2"]')
-    parser.add_argument("--threshold", type=float, default=0.4,
-                        help="Similitud mínima (0-1, default: 0.4)")
+    parser.add_argument("--threshold", type=float, default=0.7,
+                        help="Similitud mínima (0-1, default: 0.7)")
     args = parser.parse_args()
 
     try:

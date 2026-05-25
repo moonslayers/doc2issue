@@ -8,7 +8,7 @@ o acepta un flag explícito --header-row.
 Uso:
     uv run python3 scripts/extract_xlsx.py docs/archivo.xlsx [output/] [--header-row N]
 """
-import sys, json
+import sys, json, datetime
 from pathlib import Path
 import pandas as pd
 
@@ -33,6 +33,20 @@ def _extract_metadata(df, up_to_row: int) -> dict:
         elif len(vals) == 1:
             meta[f"row_{i}"] = str(vals[0])
     return meta
+
+
+class DateTimeEncoder(json.JSONEncoder):
+    """Serializa tipos datetime/date/Timestamp de pandas a ISO format."""
+    def default(self, obj):
+        if isinstance(obj, (datetime.datetime, datetime.date)):
+            return obj.isoformat()
+        try:
+            import pandas as pd
+            if isinstance(obj, pd.Timestamp):
+                return obj.isoformat()
+        except ImportError:
+            pass
+        return super().default(obj)
 
 
 def extract(xlsx_path: str, output_dir: str = "output",
@@ -70,7 +84,20 @@ def extract(xlsx_path: str, output_dir: str = "output",
         for row in records
     ]
 
+    # DateTimeEncoder se encarga de convertir datetime/date/Timestamp al serializar
+
     json_path = out / f"{xlsx.stem}.batch.json"
+
+    def serialize(val):
+        if isinstance(val, (pd.Timestamp, pd.Timestamp)):
+            return val.isoformat()
+        import datetime as dt
+        if isinstance(val, (dt.datetime, dt.date)):
+            return val.isoformat()
+        return val
+
+    records = [{k: serialize(v) for k, v in row.items()} for row in records]
+
     output = {
         "source": str(xlsx),
         "type": "xlsx",
@@ -80,9 +107,9 @@ def extract(xlsx_path: str, output_dir: str = "output",
         "metadata": metadata,
     }
     json_path.write_text(
-        json.dumps(output, indent=2, ensure_ascii=False), encoding="utf-8"
+        json.dumps(output, indent=2, ensure_ascii=False, cls=DateTimeEncoder), encoding="utf-8"
     )
-    print(json.dumps(output, indent=2))
+    print(json.dumps(output, indent=2, cls=DateTimeEncoder))
 
     # Manifest para consistencia
     manifest = {
@@ -92,7 +119,7 @@ def extract(xlsx_path: str, output_dir: str = "output",
         "rows": len(records),
     }
     (out / f"{xlsx.stem}.manifest.json").write_text(
-        json.dumps(manifest, indent=2), encoding="utf-8"
+        json.dumps(manifest, indent=2, cls=DateTimeEncoder), encoding="utf-8"
     )
 
 

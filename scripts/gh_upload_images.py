@@ -9,6 +9,7 @@ Uso:
       --images '["ruta1.png","ruta2.png"]'
 """
 import sys, json, subprocess, base64, argparse, os, time
+import urllib.parse
 from pathlib import Path
 from utils import load_env
 
@@ -36,7 +37,8 @@ def upload_image(repo: str, issue_number: int, image_path: str,
     )
     if check.returncode == 0 and check.stdout.strip():
         # Construir URL github.com/blob (la de la API tiene token temporal)
-        existing_url = f"https://github.com/{repo}/blob/main/.issue-assets/{issue_number}/{img.name}?raw=true"
+        import urllib.parse
+        existing_url = f"https://github.com/{repo}/blob/main/.issue-assets/{issue_number}/{urllib.parse.quote(img.name)}?raw=true"
         print(f"  ↳ Ya existe: {existing_url}", file=sys.stderr)
         return existing_url
 
@@ -63,7 +65,7 @@ def upload_image(repo: str, issue_number: int, image_path: str,
         )
         if r.returncode == 0:
             # Ignorar URL de la API, construir URL github.com/blob
-            raw_url = f"https://github.com/{repo}/blob/main/.issue-assets/{issue_number}/{img.name}?raw=true"
+            raw_url = f"https://github.com/{repo}/blob/main/.issue-assets/{issue_number}/{urllib.parse.quote(img.name)}?raw=true"
             print(f"  ✅ Subida: {raw_url}", file=sys.stderr)
             payload_path.unlink()
             return raw_url

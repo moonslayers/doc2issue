@@ -32,6 +32,11 @@ Esto genera `output/<archivo>.manifest.json` con estos campos:
 
 > Si no encuentras un campo, **omítelo del JSON**. Usa el nombre del archivo como fallback para `title`.
 
+
+
+> **Importante**: Si el documento contiene múltiples requerimientos, el analyzer debe generar
+> UN archivo `.issue.json` por cada uno. NO combinarlos en un solo issue.
+
 ## Output contract
 ```json
 {

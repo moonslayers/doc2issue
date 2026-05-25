@@ -37,6 +37,11 @@ Cada fila del Excel puede representar un issue. Identifica estas columnas por no
 
 > Si una columna no coincide con ningún campo conocido, **incluirla igual en el registro** del JSON. El analyzer decidirá después si usarla o no.
 
+
+
+> **Importante**: Si el documento contiene múltiples requerimientos, el analyzer debe generar
+> UN archivo `.issue.json` por cada uno. NO combinarlos en un solo issue.
+
 ## Output contract (por fila)
 Cada fila se convierte en un objeto dentro de `rows[]`. Luego el analyzer genera un issue por fila:
 

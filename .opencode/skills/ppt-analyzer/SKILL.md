@@ -31,6 +31,11 @@ Esto genera `output/<archivo>.manifest.json` con estos campos:
 
 > Las **notas del presentador** suelen contener la información más valiosa: detalles técnicos, decisiones de diseño, y requirements que no están en los slides. No las ignores.
 
+
+
+> **Importante**: Si el documento contiene múltiples requerimientos, el analyzer debe generar
+> UN archivo `.issue.json` por cada uno. NO combinarlos en un solo issue.
+
 ## Output contract
 ```json
 {

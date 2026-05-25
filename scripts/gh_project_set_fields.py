@@ -53,8 +53,21 @@ def _add_item_to_project(project_id: str, issue_node_id: str) -> str:
 
 def _set_field(project_id: str, item_id: str, field_id: str, value) -> bool:
     """Setea un campo del proyecto, detectando el tipo de valor."""
-    value_json = json.dumps(value)
-    q = 'mutation{updateProjectV2ItemFieldValue(input:{projectId:"' + project_id + '" itemId:"' + item_id + '" fieldId:"' + field_id + '" value:' + value_json + '}){projectV2Item{id}}}'
+    if isinstance(value, dict):
+        parts = []
+        for k, v in value.items():
+            if isinstance(v, str):
+                parts.append(f'{k}: "{v}"')
+            elif isinstance(v, bool):
+                parts.append(f'{k}: {"true" if v else "false"}')
+            elif isinstance(v, (int, float)):
+                parts.append(f'{k}: {v}')
+            else:
+                parts.append(f'{k}: "{v}"')
+        value_str = "{" + ",".join(parts) + "}"
+    else:
+        value_str = json.dumps(value)
+    q = 'mutation{updateProjectV2ItemFieldValue(input:{projectId:"' + project_id + '" itemId:"' + item_id + '" fieldId:"' + field_id + '" value:' + value_str + '}){projectV2Item{id}}}'
     r = _run_gh(["gh","api","graphql","-f",f"query={q}","--jq",".data.updateProjectV2ItemFieldValue.projectV2Item.id"])
     return bool(r.strip())
 

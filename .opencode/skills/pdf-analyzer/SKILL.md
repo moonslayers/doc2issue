@@ -34,6 +34,11 @@ Esto genera `output/<archivo>.manifest.json` con estos campos:
 
 > Si no encuentras un campo, **omítelo del JSON** (no pongas null). El campo `title` es el único realmente obligatorio; si no aparece, usa el nombre del archivo como fallback y agrega una pregunta en `questions_for_pm`.
 
+
+
+> **Importante**: Si el documento contiene múltiples requerimientos, el analyzer debe generar
+> UN archivo `.issue.json` por cada uno. NO combinarlos en un solo issue.
+
 ## Output contract
 ```json
 {
