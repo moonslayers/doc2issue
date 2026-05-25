@@ -10,6 +10,8 @@ import sys
 import json
 import subprocess
 import argparse
+import os
+from utils import load_env
 
 
 def get_owner() -> str:
@@ -59,8 +61,10 @@ def list_repos(owner: str | None = None) -> list[dict]:
 
 
 def main():
+    load_env()
     parser = argparse.ArgumentParser(description="Lista repositorios de GitHub")
-    parser.add_argument("--owner", help="Owner (user u org). Default: usuario autenticado")
+    parser.add_argument("--owner", default=os.environ.get("GITHUB_OWNER"),
+                        help="Owner (user u org). Default: .env → gh api user")
     args = parser.parse_args()
 
     try:

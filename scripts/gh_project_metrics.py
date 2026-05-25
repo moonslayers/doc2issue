@@ -1,23 +1,21 @@
 #!/usr/bin/env python3
-"""Obtiene métricas de un GitHub Project (v2) usando gh CLI.
+"""Obtiene métricas de un GitHub Project (v2) usando gh CLI + GraphQL.
 
 Uso:
-    uv run python3 scripts/gh_project_metrics.py <numero> --owner <owner>
+    uv run python3 scripts/gh_project_metrics.py <numero> [--owner <owner>]
 
 Ejemplo:
-    uv run python3 scripts/gh_project_metrics.py 1 --owner testuser
+    uv run python3 scripts/gh_project_metrics.py 1 --owner @me
 
-Salida: JSON con:
-  - project: info del proyecto
-  - total_items: cantidad total de ítems
-  - by_status: ítems agrupados por columna de estado
-  - recent_items: últimos ítems actualizados
+Salida: JSON con project info, total de items, desglose por status/priority/size,
+y lista de items recientes.
 """
 import sys
 import json
 import subprocess
 import argparse
-from datetime import datetime, timezone
+import os
+from utils import load_env
 
 
 def get_owner() -> str:
@@ -28,85 +26,106 @@ def get_owner() -> str:
     return r.stdout.strip()
 
 
-def project_metrics(number: int, owner: str | None = None) -> dict:
-    """Obtiene métricas de un proyecto.
+def _run_gh(args: list[str]) -> str:
+    """Ejecuta un comando gh y retorna stdout. Errores se propagan."""
+    r = subprocess.run(args, capture_output=True, text=True, check=True)
+    return r.stdout
 
-    Retorna un dict con:
-    - project: {number, title, url}
-    - total_items: int
-    - by_status: {columna: cantidad}
-    - by_priority: {prioridad: cantidad}
-    - by_size: {tamaño: cantidad}
-    - recent_items: [{title, status, updated_at}]
+
+def project_metrics(number: int, owner: str | None = None) -> dict:
+    """Obtiene métricas completas de un proyecto vía GraphQL.
+
+    Paso 1: Obtener el node ID del proyecto con `gh project view`.
+    Paso 2: Consultar items + field values con GraphQL.
     """
     if owner is None:
         owner = get_owner()
 
-    # Obtener info del proyecto + items con campos
-    r = subprocess.run(
-        [
-            "gh", "project", "view", str(number),
-            "--owner", owner,
-            "--json", "title,url,items,fields",
-            "--limit", "200",
-        ],
-        capture_output=True, text=True, check=True,
-    )
-    data = json.loads(r.stdout)
+    # ── Paso 1: info básica + node ID ──────────────────────────────
+    raw = _run_gh([
+        "gh", "project", "view", str(number),
+        "--owner", owner,
+        "--format", "json",
+    ])
+    meta = json.loads(raw)
 
-    project_info = {
-        "number": number,
-        "title": data.get("title", ""),
-        "url": data.get("url", ""),
+    project_id = meta["id"]
+    project_title = meta.get("title", "")
+    project_url = meta.get("url", "")
+    total_count = meta.get("items", {}).get("totalCount", 0)
+
+    # ── Paso 2: GraphQL — items con field values ───────────────────
+    query = """
+    query($id:ID!) {
+      node(id:$id) {
+        ... on ProjectV2 {
+          items(first: 100) {
+            nodes {
+              content {
+                ... on Issue { title }
+                ... on DraftIssue { title }
+                ... on PullRequest { title }
+              }
+              updatedAt
+              fieldValues(first: 20) {
+                nodes {
+                  ... on ProjectV2ItemFieldSingleSelectValue {
+                    name
+                    field {
+                      ... on ProjectV2SingleSelectField {
+                        name
+                        id
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
+    """
 
-    items = data.get("items", {}).get("nodes", [])
+    raw2 = _run_gh([
+        "gh", "api", "graphql",
+        "-f", f"query={query}",
+        "-F", f"id={project_id}",
+    ])
+    gql = json.loads(raw2)
+    items = (gql.get("data", {})
+                .get("node", {})
+                .get("items", {})
+                .get("nodes", []))
 
-    # Mapear field names para status y otros
-    fields = data.get("fields", {}).get("nodes", [])
-    status_field_id = None
-    priority_field_id = None
-    size_field_id = None
-
-    for f in fields:
-        fname = f.get("name", "").lower()
-        if fname in ("status", "state", "estado"):
-            status_field_id = f["id"]
-        elif fname in ("priority", "prioridad"):
-            priority_field_id = f["id"]
-        elif fname in ("size", "tamaño", "story points"):
-            size_field_id = f["id"]
-
-    # Procesar items
+    # ── Procesar items ─────────────────────────────────────────────
     by_status: dict[str, int] = {}
     by_priority: dict[str, int] = {}
     by_size: dict[str, int] = {}
     recent_items: list[dict] = []
 
     for item in items:
-        content = item.get("content", {})
-        title = ""
-        if content:
-            title = content.get("title", "") or ""
+        content = item.get("content") or {}
+        title = content.get("title", "") or ""
+        updated_at = item.get("updatedAt", "") or ""
 
-        updated_at = item.get("updatedAt", "")
+        # Extraer field values por tipo de campo
         status = ""
         priority = ""
         size = ""
 
-        # Extraer field values
         for fv in item.get("fieldValues", {}).get("nodes", []):
-            fv_field = fv.get("field", {})
-            fv_field_id = fv_field.get("id", "")
-            fv_name = fv.get("name", "")
+            fv_field = fv.get("field") or {}
+            fv_name = fv.get("name", "") or ""
+            field_name = (fv_field.get("name", "") or "").lower()
 
-            if fv_field_id == status_field_id:
+            if field_name in ("status", "state", "estado"):
                 status = fv_name
                 by_status[status] = by_status.get(status, 0) + 1
-            elif fv_field_id == priority_field_id:
+            elif field_name in ("priority", "prioridad"):
                 priority = fv_name
                 by_priority[priority] = by_priority.get(priority, 0) + 1
-            elif fv_field_id == size_field_id:
+            elif field_name in ("size", "tamaño", "story points"):
                 size = fv_name
                 by_size[size] = by_size.get(size, 0) + 1
 
@@ -116,16 +135,17 @@ def project_metrics(number: int, owner: str | None = None) -> dict:
             "updated_at": updated_at,
         })
 
-    # Ordenar recent_items por updated_at descendente
-    def _sort_key(item):
-        dt = item.get("updated_at", "")
-        return dt if dt else ""
-
-    recent_items.sort(key=_sort_key, reverse=True)
+    # Ordenar por updated_at descendente
+    recent_items.sort(key=lambda x: x["updated_at"], reverse=True)
 
     return {
-        "project": project_info,
-        "total_items": len(items),
+        "project": {
+            "number": number,
+            "title": project_title,
+            "url": project_url,
+        },
+        "total_items": total_count,
+        "loaded_items": len(items),
         "by_status": dict(sorted(by_status.items())),
         "by_priority": dict(sorted(by_priority.items())),
         "by_size": dict(sorted(by_size.items())),
@@ -134,9 +154,13 @@ def project_metrics(number: int, owner: str | None = None) -> dict:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Métricas de GitHub Project")
+    load_env()
+    parser = argparse.ArgumentParser(
+        description="Métricas de GitHub Project (con GraphQL)"
+    )
     parser.add_argument("number", type=int, help="Número del project")
-    parser.add_argument("--owner", help="Owner del proyecto")
+    parser.add_argument("--owner", default=os.environ.get("GITHUB_OWNER"),
+                        help="Owner. Default: .env → gh api user")
     args = parser.parse_args()
 
     try:
@@ -146,7 +170,10 @@ def main():
         print(f"❌ Error gh: {e.stderr.strip()}", file=sys.stderr)
         sys.exit(1)
     except FileNotFoundError:
-        print("❌ gh CLI no encontrado", file=sys.stderr)
+        print("❌ gh CLI no encontrado. ¿Instalaste github-cli?", file=sys.stderr)
+        sys.exit(1)
+    except (KeyError, IndexError, json.JSONDecodeError) as e:
+        print(f"❌ Error procesando datos: {e}", file=sys.stderr)
         sys.exit(1)
 
 

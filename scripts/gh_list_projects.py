@@ -14,6 +14,8 @@ import sys
 import json
 import subprocess
 import argparse
+import os
+from utils import load_env
 
 
 def get_owner() -> str:
@@ -34,7 +36,7 @@ def list_projects(owner: str | None = None, repo: str | None = None) -> list[dic
     if owner is None:
         owner = get_owner()
 
-    cmd = ["gh", "project", "list", "--owner", owner, "--json", "title,number,url,closed"]
+    cmd = ["gh", "project", "list", "--owner", owner, "--format", "json"]
 
     if repo:
         cmd.extend(["--repo", f"{owner}/{repo}" if "/" not in repo else repo])
@@ -54,9 +56,12 @@ def list_projects(owner: str | None = None, repo: str | None = None) -> list[dic
 
 
 def main():
+    load_env()
     parser = argparse.ArgumentParser(description="Lista GitHub Projects")
-    parser.add_argument("--owner", help="Owner (user u org)")
-    parser.add_argument("--repo", help="Repo específico (ej: doc2issue)")
+    parser.add_argument("--owner", default=os.environ.get("GITHUB_OWNER"),
+                        help="Owner (user u org). Default: .env → gh api user")
+    parser.add_argument("--repo", default=os.environ.get("GITHUB_REPO"),
+                        help="Repo específico (ej: doc2issue). Default: .env")
     args = parser.parse_args()
 
     try:
