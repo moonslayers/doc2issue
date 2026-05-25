@@ -38,6 +38,19 @@ La skill se carga automáticamente por keywords. Sigue sus pasos:
 2. Aplica las reglas de negocio de la skill para identificar título, descripción, criterios, etc.
 3. Revisa los edge cases documentados en la skill
 
+### 2.5 Clasificar tipo de documento
+
+No todo documento de entrada es un "requerimiento". Clasifícalo temprano:
+
+```bash
+head -20 output/<archivo>.txt | grep -iE "formato|template|contrato|CONTRATO DE|rev\.|versión|form"
+```
+
+Si se detectan keywords de plantilla/formato:
+- Marcar `doc_type: "reference"` en vez de `"requirements"`
+- Agregar `questions_for_pm: ["Este documento parece una plantilla, no requerimientos. ¿Crear issue igualmente?"]`
+- No forzar la creación de issues si no corresponde
+
 ### 3. Delegar slides al agente vision (una instancia FRESCA por lote)
 
 El manifest contiene imágenes de slides/páginas **completos** en `images[]`. Cada una es un slide completo con su contexto visual.
@@ -84,13 +97,39 @@ El JSON actual tiene datos crudos del documento. El creator necesita
 información adicional para crear el issue sin tener que preguntar nada.
 **Esta es tu responsabilidad como analyzer.**
 
-#### 5.1 Determinar repo destino
+#### 5.1 Determinar repo destino (autodetect)
+
 ```bash
-# Usar GITHUB_REPO del .env si existe, si no preguntar al usuario
-echo "Repo destino (owner/repo):"
-read REPO
+# 1. Intentar desde git remote
+REPO=$(git remote get-url origin 2>/dev/null | grep -oP '\K[^/]+/[^/.]+(?=\.git)?$')
+# 2. Si no, de GITHUB_REPO en .env
+REPO=${REPO:-$GITHUB_REPO}
+# 3. Si no, preguntar
+if [ -z "$REPO" ]; then
+  echo "Repo destino (owner/repo):"; read REPO
+fi
 ```
-Agregar al JSON: `"target_repo": "moonslayers/sys-2-credit-frontend"`
+
+Agregar al JSON: `"target_repo": "$REPO"`
+
+#### 5.2 Determinar project destino (autodetect)
+
+```bash
+# Listar proyectos abiertos
+PROJECTS=$(gh project list --owner "$OWNER" --format json 2>/dev/null |   python3 -c "import sys,json; ps=json.load(sys.stdin).get('projects',[]); [print(f'{p["number"]}: {p["title"]}') for p in ps if not p.get('closed')]" 2>/dev/null)
+
+# Si hay solo 1, usarlo automáticamente
+# Si hay varios, preguntar
+COUNT=$(echo "$PROJECTS" | wc -l)
+if [ "$COUNT" -eq 1 ]; then
+  PROJECT=$(echo "$PROJECTS" | cut -d: -f1)
+elif [ "$COUNT" -gt 1 ]; then
+  echo "$PROJECTS"
+  echo "Número de project:"; read PROJECT
+fi
+```
+
+Agregar al JSON: `"target_project": $PROJECT`
 
 #### 5.2 Determinar project destino
 ```bash
@@ -100,14 +139,25 @@ read PROJECT
 ```
 Agregar al JSON: `"target_project": 2`
 
-#### 5.3 Resolver labels contra el repo destino
-Los labels del documento pueden no existir en el repo. Usa el script:
-```bash
-LABELS_JSON=$(cat output/<nombre>.issue.json | python3 -c "import sys,json; print(json.dumps(json.load(sys.stdin).get('labels',[])))")
-uv run python3 scripts/gh_match_labels.py --repo "$REPO" --labels "$LABELS_JSON"
-```
-Del resultado, usar `all_found` como `labels_resolved` en el JSON.
-Si hay `unmatched`, mostrarlos al usuario como advertencia.
+#### 5.3 Listar labels del repo y asignar directamente
+
+NO inventes labels y luego los matchees. El flujo correcto es:
+
+1. Listar los labels existentes en el repo destino:
+   ```bash
+   gh label list --repo "$REPO" --limit 200 --json name --jq '.[].name'
+   ```
+2. Guardar la lista completa (ej: `labels_disponibles`).
+3. Para cada issue, elegir labels **directamente de esa lista**.
+4. Asignarlos como `labels_resolved` en el JSON.
+
+> El script `gh_match_labels.py` solo se usa cuando los labels vienen
+> del **contenido del documento** (columna "Labels" en un Excel, o
+> "Tags:" en el texto). Cuando tú asignas labels como analyzer,
+> el matching es un rodeo innecesario.
+>
+> Si un label del documento no existe en el repo: preguntar al usuario
+> si crearlo o elegir otro existente.
 
 #### 5.4 Inferir size y estimate si faltan
 Si el JSON no tiene `size` o `estimate_hours`, inferirlos:

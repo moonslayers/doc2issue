@@ -55,6 +55,17 @@ Esto genera `output/<archivo>.manifest.json` con estos campos:
 ```
 
 ## Edge cases
+
+## References (opcional)
+Vincular este documento con otros archivos relacionados:
+```json
+{
+  "references": [
+    {"type": "data", "path": "output/archivo.batch.json", "description": "Datos relacionados"}
+  ]
+}
+```
+## Edge cases
 | Caso | Qué hacer |
 |------|-----------|
 | **PPTX sin notas** | Analizar solo slides, no generar advertencia |

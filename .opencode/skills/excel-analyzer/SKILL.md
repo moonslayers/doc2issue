@@ -53,6 +53,17 @@ Cada fila se convierte en un objeto dentro de `rows[]`. Luego el analyzer genera
 ```
 
 ## Edge cases
+
+## References (opcional)
+Vincular este documento con otros archivos relacionados:
+```json
+{
+  "references": [
+    {"type": "data", "path": "output/archivo.batch.json", "description": "Datos relacionados"}
+  ]
+}
+```
+## Edge cases
 | Caso | Qué hacer |
 |------|-----------|
 | **Header en segunda fila** | Usar primera fila como header siempre (pandas lo hace por defecto) |

@@ -58,6 +58,17 @@ Esto genera `output/<archivo>.manifest.json` con estos campos:
 ```
 
 ## Edge cases
+
+## References (opcional)
+Vincular este documento con otros archivos relacionados:
+```json
+{
+  "references": [
+    {"type": "data", "path": "output/archivo.batch.json", "description": "Datos relacionados"}
+  ]
+}
+```
+## Edge cases
 | Caso | Qué hacer |
 |------|-----------|
 | **PDF escaneado** (0 chars extraídos) | Preguntar al usuario si quiere OCR externo. Agregar `questions_for_pm: ["El PDF parece escaneado (sin texto extraíble). ¿Usar OCR?"]` |
