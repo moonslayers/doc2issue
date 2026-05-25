@@ -28,6 +28,29 @@ gh issue edit <N> --repo <target_repo> --body-file output/archivo.body.md
 uv run python3 scripts/gh_project_set_fields.py --project <N> --owner <owner> --item-number <N> --repo <target_repo> --fields '{"Status":"Todo"}'
 ```
 
+## Formato de URLs de imágenes
+
+Las imágenes se suben al repo y se referencian como:
+
+```
+https://github.com/{owner}/{repo}/blob/main/.issue-assets/{number}/{file}?raw=true
+```
+
+Notas:
+- GitHub renderiza estas URLs autenticado desde la UI del issue
+- Los espacios y caracteres especiales se URL-encodean automáticamente
+- Si la imagen no se ve inmediatamente, esperar unos minutos (CDN de GitHub)
+- El script `gh_upload_images.py` ya genera las URLs en este formato
+
+## Verificación post-creación
+
+Después de crear el issue y agregarlo al proyecto, verificar:
+
+1. ✅ Abrir la URL del issue y confirmar que las imágenes se vean
+2. ✅ Verificar que los labels estén asignados correctamente
+3. ✅ Verificar que los campos del project (Status, Priority, Size) estén seteados
+4. ✅ Si algo falla, corregir manualmente (editar issue o re-ejecutar script)
+
 ## Scripts disponibles
 | Script | Qué hace |
 |--------|----------|
