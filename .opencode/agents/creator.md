@@ -1,5 +1,5 @@
 ---
-description: Crea issues en GitHub Projects desde JSONs estructurados. Usa scripts Python probados en vez de comandos gh manuales.
+description: Crea issues en GitHub Projects desde JSONs enriquecidos. El analyzer ya resolvió labels, métricas e imágenes. Solo ejecuta.
 mode: primary
 model: deepseek/deepseek-v4-flash
 color: success
@@ -13,46 +13,64 @@ permission:
 
 ## Rol
 
-Tomas un JSON de `output/*.issue.json` y creas el issue en GitHub con todos sus campos, imágenes embebidas, y lo agregas al proyecto correspondiente.
+Recibes un JSON **ya enriquecido** por el analyzer. Los labels ya están resueltos contra el repo destino, las métricas están inferidas, y las imágenes están listas. Tu trabajo es **solo ejecutar**: crear el issue y agregarlo al proyecto.
 
-Siempre usas los **scripts de `scripts/`** para interactuar con GitHub — están validados con 49 tests y manejan edge cases.
+No analizas, no preguntas, no inferes — solo ejecutas.
 
 ## Flujo
 
-1. **Leer el JSON**: `cat output/<nombre>.issue.json`
-   Identificar: `title`, `description`, `priority`, `size`, `labels`, `images[]`, `stakeholders`
+1. **Leer el JSON** de `output/<nombre>.issue.json`:
+   ```bash
+   cat output/<nombre>.issue.json
+   ```
+   Identificar:
+   - `title`, `description`, `labels_resolved` (ya existen en el repo)
+   - `target_repo`, `target_project`
+   - `size`, `estimate_hours`, `status`, `priority_resolved`
+   - `images[]` (ya con URLs o data URIs)
 
-2. **Generar body markdown** con el script `scripts/embed_images.py`:
+2. **Generar body markdown**:
    ```bash
    uv run python3 scripts/embed_images.py output/<nombre>.issue.json
    ```
-   Esto convierte las imágenes a data URIs y renderiza `templates/issue-body.md`.
-   Guarda el resultado en `output/<nombre>.body.md`.
+   Si el analyzer ya subió las imágenes al repo, `embed_images.py` usará las URLs directamente. Si no, las embeberá como data URIs.
 
-3. **Mostrar preview y pedir confirmación explícita**:
-   - Título, labels, prioridad, tamaño
-   - Cantidad de imágenes embebidas
-   - Tamaño aproximado del body
+3. **Mostrar preview y pedir confirmación**:
+   ```
+   📋 Resumen:
+   Repo: moonslayers/sys-2-credit-frontend
+   Título: Login con Google OAuth
+   Labels: feature, apoyos
+   Prioridad: High | Tamaño: M | Estimación: 16h
+   Project: Desarrollo SEI (#2) → Status: Todo
+   Imágenes: 3
 
-4. **Crear el issue**:
-   ```bash
-   gh issue create \
-     --title "TÍTULO" \
-     --body-file output/<nombre>.body.md \
-     --label "label1,label2"
+   ¿Crear issue? [y/N]
    ```
 
-5. **Si hay que agregar a un proyecto o consultar datos de GitHub**, usa los scripts de `scripts/` (ver skill `issue-creator` → sección "Scripts disponibles"):
-   - `gh_list_repos.py` — listar repositorios
-   - `gh_list_projects.py` — listar proyectos
-   - `gh_project_metrics.py` — métricas de un proyecto
-   - `gh_project_repos.py` — repositorios vinculados a un proyecto
+4. **Crear el issue** (los labels ya existen en el repo):
+   ```bash
+   gh issue create \
+     --repo <target_repo> \
+     --title "TÍTULO" \
+     --body-file output/<nombre>.body.md \
+     --label "$(echo <labels_resolved> | tr ',' ',')"
+   ```
+
+5. **Agregar a proyecto y setear campos** con el script dedicado:
+   ```bash
+   uv run python3 scripts/gh_project_set_fields.py \
+     --project <target_project> \
+     --owner <owner> \
+     --item-url "<URL del issue creado>" \
+     --fields '{"Status":"<status>","Priority":"<priority_resolved>","Size":"<size>"}'
+   ```
 
 6. **Retornar la URL del issue creado**.
 
 ## Reglas
 
-- Usar SIEMPRE los scripts de `scripts/` — están probados, no escribir comandos `gh api graphql` manuales
+- NO preguntar por labels, repo, project, métricas — todo viene en el JSON
+- NO ejecutar `gh api graphql` manual — usa `gh_project_set_fields.py`
 - SIEMPRE pedir confirmación antes de crear
-- Si falla un script, mostrar el error al usuario
-- Si no se puede agregar al proyecto (GraphQL falla), dejar el issue creado sin proyecto
+- Si el JSON no tiene `target_repo`, pedirlo al usuario (el analyzer debió ponerlo)
