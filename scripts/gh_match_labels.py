@@ -40,6 +40,7 @@ def fetch_repo_labels(repo: str) -> list[dict]:
     """Obtiene labels existentes del repo."""
     r = subprocess.run(
         ["gh", "label", "list", "--repo", repo,
+         "--limit", "200",
          "--json", "name,description,color"],
         capture_output=True, text=True, check=True,
     )
