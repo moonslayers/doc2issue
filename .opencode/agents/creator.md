@@ -1,5 +1,5 @@
 ---
-description: Crea issues en GitHub Projects desde JSONs enriquecidos. Usa flujo en 2 fases (texto → imágenes) para evitar límite de 65KB.
+description: Crea issues en GitHub Projects desde JSONs enriquecidos. Flujo en 2 fases: texto → imágenes + proyecto.
 mode: primary
 model: deepseek/deepseek-v4-flash
 color: success
@@ -24,7 +24,7 @@ Recibes un JSON ya enriquecido por el analyzer. Creas el issue en 2 fases para e
    uv run python3 scripts/embed_images.py output/<nombre>.issue.json --text-only
    ```
 3. Mostrar preview y pedir confirmación
-4. Crear issue (body pequeño, ~2KB):
+4. Crear issue (body ~2KB):
    ```bash
    gh issue create \
      --repo <target_repo> \
@@ -41,7 +41,7 @@ Recibes un JSON ya enriquecido por el analyzer. Creas el issue en 2 fases para e
      --repo <target_repo> --issue <NÚMERO> \
      --images '["ruta1.png","ruta2.png"]'
    ```
-7. Generar body completo (con URLs de imágenes):
+7. Generar body completo (embed_images.py usará las rutas ya reemplazadas por URLs):
    ```bash
    uv run python3 scripts/embed_images.py output/<nombre>.issue.json
    ```
@@ -50,8 +50,6 @@ Recibes un JSON ya enriquecido por el analyzer. Creas el issue en 2 fases para e
    gh issue edit <NÚMERO> --repo <target_repo> \
      --body-file output/<nombre>.body.md
    ```
-
-### Fase 3: Setear proyecto
 9. Agregar a proyecto y setear campos:
    ```bash
    uv run python3 scripts/gh_project_set_fields.py \
@@ -59,11 +57,11 @@ Recibes un JSON ya enriquecido por el analyzer. Creas el issue en 2 fases para e
      --item-number <NÚMERO> --repo <target_repo> \
      --fields '{"Status":"<status>","Priority":"<priority_resolved>","Size":"<size>","Estimate":<estimate_hours>}'
    ```
-
 10. Retornar la URL del issue creado.
 
 ## Reglas
-- SIEMPRE flujo en 2 fases (texto → imágenes)
-- NO incluir imágenes en el primer `gh issue create`
+- Fase 1: SIEMPRE `--text-only` (body sin imágenes)
+- Fase 2: `gh_upload_images.py` primero, LUEGO `embed_images.py` (nunca al revés)
+- NO usar `embed_images.py --upload` (no existe)
 - SIEMPRE pedir confirmación antes de la Fase 1
-- Si falla `gh_project_set_fields.py`, el issue ya está creado
+- Si falla `gh_project_set_fields.py`, el issue ya está creado — notificarlo

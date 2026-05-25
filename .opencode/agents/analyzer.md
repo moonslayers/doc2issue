@@ -218,7 +218,7 @@ Si el JSON no tiene `size` o `estimate_hours`, inferirlos:
 #### 5.5 Subir imágenes si el body será muy grande
 Estimar tamaño del body. Si supera 60KB, subir imágenes al repo:
 ```bash
-uv run python3 scripts/embed_images.py output/<nombre>.issue.json   --upload --repo "$REPO" --issue "<número>" 2>&1
+uv run python3 scripts/gh_upload_images.py --repo "$REPO" --issue "<número>" --images "$IMAGES_JSON" --update-json output/<nombre>.issue.json 2>&1
 ```
 (El número de issue se obtiene después de crear, así que esta parte
 la hará el creator. Pero el analyzer debe dejar las imágenes listas.)

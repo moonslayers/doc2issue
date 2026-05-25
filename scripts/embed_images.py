@@ -10,7 +10,7 @@ El script:
 3. Renderiza el template Mustache con los datos
 4. Guarda el body listo para gh issue create --body-file
 """
-import sys, json, base64, re, subprocess, argparse
+import sys, json, base64, re, argparse
 from pathlib import Path
 
 
@@ -41,11 +41,19 @@ def embed_images(data: dict) -> dict:
     """Convierte las rutas de `images[].path` a data URIs base64.
 
     Modifica el dict in-place y lo retorna para conveniencia.
-    Si una imagen no existe en disco, deja el path vacío.
+    - Si la ruta es URL (http/https): la deja intacta
+    - Si es data URI: la deja intacta
+    - Si es archivo local: la convierte a data URI base64
+    - Si no existe: la deja vacía
     """
     for img in data.get('images', []):
         path = img.get('path', '')
-        if path and Path(path).is_file():
+        if not path:
+            continue
+        # URLs y data URIs se dejan intactas
+        if path.startswith(('http://', 'https://', 'data:')):
+            continue
+        if Path(path).is_file():
             try:
                 raw = Path(path).read_bytes()
                 b64 = base64.b64encode(raw).decode('ascii')
@@ -108,49 +116,14 @@ def render_template(template: str, data: dict) -> str:
 BODY_SIZE_LIMIT = 60_000  # 60KB (GitHub max es 65KB, dejamos margen)
 
 
-def _upload_and_replace(issue_data: dict, repo: str, issue_number: int) -> dict:
-    """Sube imágenes al repo y reemplaza paths por URLs."""
-    import tempfile, json as _json
-
-    # Recolectar paths de imágenes
-    img_paths = [img['path'] for img in issue_data.get('images', []) if img.get('path')]
-    if not img_paths:
-        return issue_data
-
-    print(f"  Subiendo {len(img_paths)} imágenes al repo...", file=sys.stderr)
-    # Llamar a gh_upload_images como subprocess
-    cmd = [
-        "uv", "run", "python3", "scripts/gh_upload_images.py",
-        "--repo", repo,
-        "--issue", str(issue_number),
-        "--images", _json.dumps(img_paths),
-    ]
-    r = subprocess.run(cmd, capture_output=True, text=True)
-    if r.returncode != 0:
-        print(f"  ⚠️  Error subiendo imágenes: {r.stderr.strip()[:200]}", file=sys.stderr)
-        return issue_data
-
-    urls = _json.loads(r.stdout.strip())
-    # Reemplazar paths por URLs (en orden)
-    url_idx = 0
-    for img in issue_data.get('images', []):
-        if img.get('path') and url_idx < len(urls):
-            img['path'] = urls[url_idx]
-            url_idx += 1
-    return issue_data
-
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Embebe imágenes como data URIs o las sube al repo"
+        description="Embebe imágenes como data URIs y renderiza el template del issue"
     )
     parser.add_argument("json_file", help="output/archivo.issue.json")
     parser.add_argument("template", nargs="?", default="templates/issue-body.md",
                         help="template a usar (default: templates/issue-body.md)")
-    parser.add_argument("--upload", action="store_true",
-                        help="Subir imágenes al repo en vez de usar data URIs")
-    parser.add_argument("--repo", help="owner/repo (requerido con --upload)")
-    parser.add_argument("--issue", type=int, help="Número del issue (requerido con --upload)")
     parser.add_argument("--text-only", action="store_true",
                         help="Generar body sin imágenes (para crear issue primero, luego subir imágenes)")
     args = parser.parse_args()
@@ -159,10 +132,6 @@ def main():
     template_path = Path(args.template)
     output_dir = json_path.parent
 
-    if args.upload and (not args.repo or not args.issue):
-        print("❌ --upload requiere --repo y --issue", file=sys.stderr)
-        sys.exit(1)
-
     # 1. Leer JSON
     if not json_path.exists():
         print(f"❌ No existe: {json_path}", file=sys.stderr)
@@ -170,14 +139,12 @@ def main():
     with open(json_path, encoding='utf-8') as f:
         issue_data = json.load(f)
 
-    # 2. Procesar imágenes según modo
+    # 2. Procesar imágenes
     if args.text_only:
         # Guardar imágenes para después, generar body sin ellas
         issue_data["_images_backup"] = issue_data.get("images", [])
         issue_data["images"] = []
         print("  📝 Body solo texto (sin imágenes)", file=sys.stderr)
-    elif args.upload:
-        issue_data = _upload_and_replace(issue_data, args.repo, args.issue)
     else:
         issue_data = embed_images(issue_data)
 
@@ -192,9 +159,9 @@ def main():
     body = render_template(template, issue_data)
 
     # 5. Verificar tamaño
-    if len(body) > BODY_SIZE_LIMIT and not args.upload:
+    if len(body) > BODY_SIZE_LIMIT:
         print(f"⚠️  Body demasiado grande: {len(body)} bytes (límite 65KB)", file=sys.stderr)
-        print(f"💡 Usa --upload --repo owner/repo --issue N para subir imágenes al repo", file=sys.stderr)
+        print(f"💡 Las imágenes se suben al repo con gh_upload_images.py", file=sys.stderr)
 
     # 6. Guardar body
     stem = json_path.stem.replace('.issue', '')  # archivo.issue.json → archivo
@@ -208,15 +175,14 @@ def main():
     print(f'🖼️  {img_count} imagen(es) en total')
     if args.text_only:
         print(f'💡 Usa gh issue edit <N> --body-file para agregar imágenes después')
-    elif not args.upload and img_count:
+    elif img_count:
         total_img_bytes = 0
         for img in issue_data.get('images', []):
             uri = img.get('path', '')
             if uri and uri.startswith('data:'):
                 total_img_bytes += len(uri) * 3 // 4
         print(f'📦 ~{total_img_bytes // 1024} KB aproximados en imágenes')
-    if args.upload:
-        print(f'☁️  Imágenes subidas al repo {args.repo}')
+
 
 
 if __name__ == '__main__':

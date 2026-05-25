@@ -45,10 +45,25 @@ def _get_project_fields(project_id: str) -> list[dict]:
 
 
 def _item_exists(project_id: str, issue_node_id: str) -> bool:
-    """Verifica si el issue ya está en el project (evita duplicados)."""
-    q = 'query{node(id:"' + project_id + '"){...on ProjectV2{items(first:100){nodes{content{...on Issue{id}}}}}}}'
-    r = _run_gh(["gh","api","graphql","-f",f"query={q}","--jq",".data.node.items.nodes[].content.id"])
-    return issue_node_id in r.splitlines()
+    """Verifica si el issue ya está en el project (evita duplicados).
+    Usa paginación para projects con >100 items."""
+    all_ids = []
+    cursor = None
+    while True:
+        after = f' after: "{cursor}"' if cursor else ''
+        q = f'query{{node(id:"{project_id}"){{...on ProjectV2{{items(first:100{after}){{nodes{{content{{...on Issue{{id}}}}}}pageInfo{{hasNextPage endCursor}}}}}}}}}}'
+        r = _run_gh(["gh","api","graphql","-f",f"query={q}","--jq",".data.node.items"])
+        data = json.loads(r)
+        nodes = data.get("nodes", [])
+        for n in nodes:
+            cid = n.get("content", {}).get("id", "")
+            if cid:
+                all_ids.append(cid)
+        page_info = data.get("pageInfo", {})
+        if not page_info.get("hasNextPage"):
+            break
+        cursor = page_info.get("endCursor")
+    return issue_node_id in all_ids
 
 
 def _add_item_to_project(project_id: str, issue_node_id: str) -> str:

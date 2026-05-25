@@ -8,10 +8,12 @@
 - [ ] {{.}}
 {{/acceptance_criteria}}
 
+{{#images}}
 ## Imágenes / Mockups
 {{#images}}
 ### {{caption}}
 ![{{caption}}]({{path}})
+{{/images}}
 {{/images}}
 
 ## Metadata
