@@ -1,5 +1,5 @@
 ---
-description: Crea issues en GitHub Projects desde JSONs enriquecidos. El analyzer ya resolvió labels, métricas e imágenes. Solo ejecuta.
+description: Crea issues en GitHub Projects desde JSONs enriquecidos. Usa flujo en 2 fases (texto → imágenes) para evitar límite de 65KB.
 mode: primary
 model: deepseek/deepseek-v4-flash
 color: success
@@ -13,42 +13,18 @@ permission:
 
 ## Rol
 
-Recibes un JSON **ya enriquecido** por el analyzer. Los labels ya están resueltos contra el repo destino, las métricas están inferidas, y las imágenes están listas. Tu trabajo es **solo ejecutar**: crear el issue y agregarlo al proyecto.
-
-No analizas, no preguntas, no inferes — solo ejecutas.
+Recibes un JSON ya enriquecido por el analyzer. Creas el issue en 2 fases para evitar el límite de 65KB de GitHub.
 
 ## Flujo
 
-1. **Leer el JSON** de `output/<nombre>.issue.json`:
+### Fase 1: Crear issue (solo texto)
+1. Leer el JSON de `output/<nombre>.issue.json`
+2. Generar body solo texto:
    ```bash
-   cat output/<nombre>.issue.json
+   uv run python3 scripts/embed_images.py output/<nombre>.issue.json --text-only
    ```
-   Identificar:
-   - `title`, `description`, `labels_resolved` (ya existen en el repo)
-   - `target_repo`, `target_project`
-   - `size`, `estimate_hours`, `status`, `priority_resolved`
-   - `images[]` (ya con URLs o data URIs)
-
-2. **Generar body markdown**:
-   ```bash
-   uv run python3 scripts/embed_images.py output/<nombre>.issue.json
-   ```
-   Si el analyzer ya subió las imágenes al repo, `embed_images.py` usará las URLs directamente. Si no, las embeberá como data URIs.
-
-3. **Mostrar preview y pedir confirmación**:
-   ```
-   📋 Resumen:
-   Repo: moonslayers/sys-2-credit-frontend
-   Título: Login con Google OAuth
-   Labels: feature, apoyos
-   Prioridad: High | Tamaño: M | Estimación: 16h
-   Project: Desarrollo SEI (#2) → Status: Todo
-   Imágenes: 3
-
-   ¿Crear issue? [y/N]
-   ```
-
-4. **Crear el issue** (los labels ya existen en el repo):
+3. Mostrar preview y pedir confirmación
+4. Crear issue (body pequeño, ~2KB):
    ```bash
    gh issue create \
      --repo <target_repo> \
@@ -56,21 +32,38 @@ No analizas, no preguntas, no inferes — solo ejecutas.
      --body-file output/<nombre>.body.md \
      --label "$(echo <labels_resolved> | tr ',' ',')"
    ```
+5. Guardar el número del issue creado
 
-5. **Agregar a proyecto y setear campos** con el script dedicado:
+### Fase 2: Agregar imágenes y proyecto
+6. Subir imágenes al repo:
    ```bash
-   uv run python3 scripts/gh_project_set_fields.py \
-     --project <target_project> \
-     --owner <owner> \
-     --item-url "<URL del issue creado>" \
-     --fields '{"Status":"<status>","Priority":"<priority_resolved>","Size":"<size>"}'
+   uv run python3 scripts/gh_upload_images.py \
+     --repo <target_repo> --issue <NÚMERO> \
+     --images '["ruta1.png","ruta2.png"]'
+   ```
+7. Generar body completo (con URLs de imágenes):
+   ```bash
+   uv run python3 scripts/embed_images.py output/<nombre>.issue.json
+   ```
+8. Actualizar el issue con el body completo:
+   ```bash
+   gh issue edit <NÚMERO> --repo <target_repo> \
+     --body-file output/<nombre>.body.md
    ```
 
-6. **Retornar la URL del issue creado**.
+### Fase 3: Setear proyecto
+9. Agregar a proyecto y setear campos:
+   ```bash
+   uv run python3 scripts/gh_project_set_fields.py \
+     --project <target_project> --owner <owner> \
+     --item-number <NÚMERO> --repo <target_repo> \
+     --fields '{"Status":"<status>","Priority":"<priority_resolved>","Size":"<size>","Estimate":<estimate_hours>}'
+   ```
+
+10. Retornar la URL del issue creado.
 
 ## Reglas
-
-- NO preguntar por labels, repo, project, métricas — todo viene en el JSON
-- NO ejecutar `gh api graphql` manual — usa `gh_project_set_fields.py`
-- SIEMPRE pedir confirmación antes de crear
-- Si el JSON no tiene `target_repo`, pedirlo al usuario (el analyzer debió ponerlo)
+- SIEMPRE flujo en 2 fases (texto → imágenes)
+- NO incluir imágenes en el primer `gh issue create`
+- SIEMPRE pedir confirmación antes de la Fase 1
+- Si falla `gh_project_set_fields.py`, el issue ya está creado

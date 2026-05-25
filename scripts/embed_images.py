@@ -151,6 +151,8 @@ def main():
                         help="Subir imágenes al repo en vez de usar data URIs")
     parser.add_argument("--repo", help="owner/repo (requerido con --upload)")
     parser.add_argument("--issue", type=int, help="Número del issue (requerido con --upload)")
+    parser.add_argument("--text-only", action="store_true",
+                        help="Generar body sin imágenes (para crear issue primero, luego subir imágenes)")
     args = parser.parse_args()
 
     json_path = Path(args.json_file)
@@ -169,7 +171,12 @@ def main():
         issue_data = json.load(f)
 
     # 2. Procesar imágenes según modo
-    if args.upload:
+    if args.text_only:
+        # Guardar imágenes para después, generar body sin ellas
+        issue_data["_images_backup"] = issue_data.get("images", [])
+        issue_data["images"] = []
+        print("  📝 Body solo texto (sin imágenes)", file=sys.stderr)
+    elif args.upload:
         issue_data = _upload_and_replace(issue_data, args.repo, args.issue)
     else:
         issue_data = embed_images(issue_data)
@@ -195,11 +202,13 @@ def main():
     body_path.write_text(body, encoding='utf-8')
 
     # 7. Reportar
-    img_count = len(issue_data.get('images', []))
+    img_count = len(issue_data.get('_images_backup', issue_data.get('images', [])))
     print(f'✅ Body generado: {body_path}')
     print(f'📏 {len(body)} bytes')
-    print(f'🖼️  {img_count} imagen(es) procesada(s)')
-    if not args.upload and img_count:
+    print(f'🖼️  {img_count} imagen(es) en total')
+    if args.text_only:
+        print(f'💡 Usa gh issue edit <N> --body-file para agregar imágenes después')
+    elif not args.upload and img_count:
         total_img_bytes = 0
         for img in issue_data.get('images', []):
             uri = img.get('path', '')

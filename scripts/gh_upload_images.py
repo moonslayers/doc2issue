@@ -35,7 +35,8 @@ def upload_image(repo: str, issue_number: int, image_path: str,
         capture_output=True, text=True,
     )
     if check.returncode == 0 and check.stdout.strip():
-        existing_url = check.stdout.strip()
+        # Construir URL github.com/blob (la de la API tiene token temporal)
+        existing_url = f"https://github.com/{repo}/blob/main/.issue-assets/{issue_number}/{img.name}?raw=true"
         print(f"  ↳ Ya existe: {existing_url}", file=sys.stderr)
         return existing_url
 
@@ -61,11 +62,8 @@ def upload_image(repo: str, issue_number: int, image_path: str,
             capture_output=True, text=True,
         )
         if r.returncode == 0:
-            url = r.stdout.strip()
-            # Convertir a raw=true para que funcione sin auth
-            raw_url = url.replace("?token=", "?raw=true")
-            if "?" not in raw_url:
-                raw_url += "?raw=true"
+            # Ignorar URL de la API, construir URL github.com/blob
+            raw_url = f"https://github.com/{repo}/blob/main/.issue-assets/{issue_number}/{img.name}?raw=true"
             print(f"  ✅ Subida: {raw_url}", file=sys.stderr)
             payload_path.unlink()
             return raw_url

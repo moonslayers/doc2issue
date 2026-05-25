@@ -18,7 +18,7 @@ def test_upload_image_creates_payload_and_calls_api(tmp_path):
         # Mock: upload exitoso
         upload_result = subprocess.CompletedProcess(
             [], 0,
-            stdout="https://github.com/test/repo/blob/main/.issue-assets/1/test.png?token=abc",
+            stdout="https://github.com/test/repo/blob/main/.issue-assets/1/test.png?raw=true",
             stderr="",
         )
         mock_run.side_effect = [check_result, upload_result]
