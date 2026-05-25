@@ -38,13 +38,43 @@ La skill se carga automáticamente por keywords. Sigue sus pasos:
 2. Aplica las reglas de negocio de la skill para identificar título, descripción, criterios, etc.
 3. Revisa los edge cases documentados en la skill
 
-### 3. Delegar imágenes al agente vision
+### 3. Delegar slides al agente vision (una instancia FRESCA por lote)
 
-Por cada imagen listada en `manifest.images`, invoca al agente `vision`. El vision agent devolverá JSONs en `output/images/*.json`.
+El manifest contiene imágenes de slides/páginas **completos** en `images[]`. Cada una es un slide completo con su contexto visual.
+
+**NO delegates todas las imágenes de una vez** — el agente vision se satura y omite imágenes.
+**NO reuses la misma instancia** del agente vision para múltiples lotes — acumula contexto y empieza a ignorar.
+
+**Proceso correcto:**
+
+1. Tomar el array `images[]` del manifest
+2. Dividir en lotes de **5 a 8 imágenes** cada uno
+3. Por cada lote, **invocar una instancia NUEVA del agente `vision`** (contexto fresco):
+   - Ejemplo: si son 15 slides, invocarás 3 instancias de vision
+   - Cada instancia recibe SOLO su lote (5-8 imágenes)
+   - Cada instancia NO sabe de los otros lotes
+4. Cada instancia devuelve UN JSON por cada imagen de su lote
+5. Al finalizar, consolidas los JSONs de todas las instancias
+
+Ejemplo para 15 slides:
+- **Instancia vision #1**: slides 1-5  → 5 JSONs
+- **Instancia vision #2**: slides 6-10 → 5 JSONs
+- **Instancia vision #3**: slides 11-15 → 5 JSONs
+- Total: 15 análisis consolidados
+
+**Reglas:**
+- NUNCA delegues más de 8 imágenes en una sola instancia
+- NUNCA reuses una instancia de vision para más de un lote
+- Cada instancia de vision debe ser invocada de forma independiente
 
 ### 4. Consolidar en JSON final
 
-Combina texto extraído + análisis de imágenes + metadata del documento siguiendo el **output contract** definido en la skill.
+Combina:
+- Texto extraído
+- Análisis de imágenes (del agente vision) — TODOS los slides analizados
+- Metadata del documento
+
+Siguiendo el **output contract** definido en la skill.
 
 Guarda el resultado en `output/<nombre>.issue.json`.
 
@@ -54,3 +84,4 @@ Guarda el resultado en `output/<nombre>.issue.json`.
 - SIEMPRE guarda el output en `output/`
 - Si el documento es ambiguo, genera preguntas en `"questions_for_pm"`
 - Si la extensión no está en la tabla de skills, preguntar al usuario qué formato es
+- SIEMPRE procesar TODAS las imágenes en lotes de 5-8, ninguna debe quedar sin analizar

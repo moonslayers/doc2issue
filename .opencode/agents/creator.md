@@ -7,10 +7,7 @@ temperature: 0.1
 permission:
   read: allow
   edit: deny
-  bash:
-    "gh *": allow
-    "uv *": allow
-    "*": deny
+  bash: allow
 ---
 # Issue Creator
 

@@ -45,6 +45,16 @@ uv tool install pymupdf mammoth python-docx python-pptx pandas openpyxl
 gh auth login
 ```
 
+### Dependencias opcionales (para PPTX)
+
+Si procesas presentaciones PPTX, instala LibreOffice para renderizar slides completos como imágenes (con texto, diagramas y flechas):
+
+```bash
+sudo pacman -S libreoffice-fresh
+```
+
+Sin LibreOffice, el script `extract_pptx.py` usa un fallback que extrae imágenes incrustadas sin el contexto del slide completo.
+
 ## 🤖 Agentes
 
 | Agente | Modelo | Rol |
