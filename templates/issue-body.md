@@ -27,4 +27,4 @@
 {{/stakeholders}}
 
 ---
-*Issue generado automáticamente por doc2issue desde `{{source}}`*
+*Issue generado automáticamente por [doc2issue](https://github.com/moonslayers/doc2issue) desde `{{source}}`*
