@@ -118,11 +118,29 @@ def set_fields(project: int, owner: str, item_number: int,
     # 3. Agregar item al proyecto (idempotente)
     if _item_exists(project_id, issue_node_id):
         print("  ⚠️  Issue ya está en el project, saltando add", file=sys.stderr)
-        # Obtener item ID existente para setear campos después
-        q = 'query{node(id:"' + project_id + '"){...on ProjectV2{items(first:100){nodes{id content{...on Issue{id}}}}}}}'
-        r = _run_gh(["gh","api","graphql","-f",f"query={q}","--jq",".data.node.items.nodes[] | select(.content.id==\"" + issue_node_id + '\") | .id'])
-        item_id = r.strip()
-        print(f"  ✅ Item ID existente: {item_id}", file=sys.stderr)
+        # Obtener item ID existente (con paginación, como _item_exists)
+        item_id = ""
+        cursor = None
+        while not item_id:
+            after = f' after: "{cursor}"' if cursor else ''
+            q = f'query{{node(id:"{project_id}"){{...on ProjectV2{{items(first:100{after}){{nodes{{id content{{...on Issue{{id}}}}}}pageInfo{{hasNextPage endCursor}}}}}}}}}}'
+            r = _run_gh(["gh","api","graphql","-f",f"query={q}","--jq",".data.node.items"])
+            data = json.loads(r)
+            for n in data.get("nodes", []):
+                cid = n.get("content", {}).get("id", "")
+                if cid == issue_node_id:
+                    item_id = n.get("id", "")
+                    break
+            if item_id:
+                break
+            page_info = data.get("pageInfo", {})
+            if not page_info.get("hasNextPage"):
+                break
+            cursor = page_info.get("endCursor")
+        if item_id:
+            print(f"  ✅ Item ID existente: {item_id}", file=sys.stderr)
+        else:
+            print(f"  ⚠️  No se encontró item ID (paginación completa)", file=sys.stderr)
     else:
         print("  Agregando al proyecto...", file=sys.stderr)
         item_id = _add_item_to_project(project_id, issue_node_id)

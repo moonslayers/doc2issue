@@ -121,6 +121,7 @@ def main():
             url = upload_image(args.repo, args.issue, img_path, branch=branch)
             if url:
                 urls.append(url)
+            time.sleep(0.5)  # Esperar consistencia del árbol SHA
 
         print(json.dumps(urls, indent=2))
 
@@ -128,13 +129,16 @@ def main():
         if args.update_json and urls:
             json_path = Path(args.update_json)
             if json_path.exists():
-                import copy
                 data = json.loads(json_path.read_text())
-                url_idx = 0
+                # Indexar URLs por nombre de archivo (no por posición)
+                url_map = {}
+                for original_path, url in zip(images, urls):
+                    url_map[Path(original_path).name] = url
+                # Reemplazar en images[] por nombre de archivo
                 for img in data.get('images', []):
-                    if img.get('path') and url_idx < len(urls):
-                        img['path'] = urls[url_idx]
-                        url_idx += 1
+                    img_name = Path(img.get('path', '')).name
+                    if img_name in url_map:
+                        img['path'] = url_map[img_name]
                 json_path.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding='utf-8')
                 print(f"  ✅ {len(urls)} URLs actualizadas en {json_path}", file=sys.stderr)
             else:

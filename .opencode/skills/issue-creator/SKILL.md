@@ -42,6 +42,17 @@ Los espacios se URL-encodean automáticamente. Si la imagen no se ve, esperar CD
 2. ✅ Verificar labels asignados
 3. ✅ Verificar campos del project (Status, Priority, Size)
 
+## Troubleshooting
+
+| Síntoma | Causa | Solución |
+|---------|-------|----------|
+| `gh_upload_images.py` falla con error SHA | Múltiples uploads paralelos al mismo branch | El script ya sube secuencialmente. Si persiste, esperar 1s entre intentos |
+| `gh_project_set_fields.py` retorna item_id vacío | Proyecto con >100 items, paginación incompleta | Verificar que el script use paginación (debe iterar hasta encontrar el issue) |
+| `gh issue create` falla: "could not add label" | Label no existe en el repo | Verificar `labels_resolved` en el JSON — el analyzer debió listar labels existentes |
+| URLs de imágenes no se ven en el issue | CDN de GitHub tarda en propagarse | Esperar 2-3 minutos y recargar la página del issue |
+| `gh` command fails: "unknown flag" | Versión de `gh` desactualizada o flags cambiaron | Ejecutar `gh <comando> --help` para ver flags actuales |
+| Body del issue truncado o >65KB | Se incluyeron imágenes sin usar `--text-only` primero | Recrear el issue: Fase 1 con `--text-only`, Fase 2 con URLs |
+
 ## Validación
 - SIEMPRE preview antes de Fase 1
 - NO usar `--upload` en embed_images.py (no existe)
