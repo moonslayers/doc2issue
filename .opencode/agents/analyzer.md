@@ -1,6 +1,6 @@
 ---
 description: Analiza documentos, identifica requerimientos individuales, genera UN JSON por requerimiento, enriquece con labels resueltos y métricas. NUNCA combina requerimientos.
-mode: primary
+mode: subagent
 model: deepseek/deepseek-v4-flash
 color: accent
 temperature: 0.3
@@ -28,11 +28,11 @@ file docs/<archivo>
 
 Cada formato tiene una skill dedicada con instrucciones detalladas de extracción, reglas de negocio, y formato de output:
 
-| Extensión | Skill | Script |
-|-----------|-------|--------|
-| `.pdf` | pdf-analyzer | scripts/extract_pdf.py |
-| `.docx` | word-parser | scripts/extract_docx.py |
-| `.pptx` | ppt-analyzer | scripts/extract_pptx.py |
+| Extensión               | Skill          | Script                  |
+| ----------------------- | -------------- | ----------------------- |
+| `.pdf`                  | pdf-analyzer   | scripts/extract_pdf.py  |
+| `.docx`                 | word-parser    | scripts/extract_docx.py |
+| `.pptx`                 | ppt-analyzer   | scripts/extract_pptx.py |
 | `.xlsx`, `.xls`, `.csv` | excel-analyzer | scripts/extract_xlsx.py |
 
 La skill se carga automáticamente por keywords. Sigue sus pasos:
@@ -89,7 +89,7 @@ Un documento puede contener MÚLTIPLES requerimientos. NO los combines en un sol
 #### 4.1 Detectar cuántos requerimientos hay
 
 Busca señales de separación entre requerimientos:
-- Títulos como "Requerimiento 1", "Feature 2", "RF-001", "Caso 3"
+- Títulos empiezahn con prefijo [FEAT], [BUG], [PLAN], [DOC], [TEST], etc. segun sea el caso
 - Secciones con `##` o `###` que describan funcionalidades distintas
 - Filas individuales en un Excel (cada fila = un issue)
 - Viñetas de primer nivel que describan features independientes
