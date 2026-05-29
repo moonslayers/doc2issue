@@ -53,6 +53,7 @@ Cada fila se convierte en un objeto dentro de `rows[]`. Luego el analyzer genera
   "priority": "string",
   "size": "string",
   "labels": ["string"],
+  "project_fields": {},  // << objeto dinámico: el analyzer lo llena con los nombres reales del project
   "stakeholders": ["string"]
 }
 ```

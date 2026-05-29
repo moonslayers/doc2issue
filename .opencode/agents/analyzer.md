@@ -159,25 +159,61 @@ fi
 
 Agregar al JSON: `"target_project": $PROJECT`
 
-#### 5.2.5 Validar campos contra el project destino
+#### 5.2.5 Consultar fields reales del project destino
 
-Antes de asignar priority, size o status, consulta los valores válidos del project:
+Antes de generar `project_fields`, consulta los campos y valores válidos del project:
 
 ```bash
 uv run python3 scripts/gh_project_fields.py --owner "$OWNER" --project "$PROJECT"
 ```
 
-Esto te dice qué valores acepta cada campo. Por ejemplo:
-- Priority: P0, P1, P2, P3, P4 (NO "High", "Medium")
-- Size: XS, S, M, L, XL
-- Status: Todo, In Progress, Done
+Guarda el resultado en memoria. Esto te dice el nombre EXACTO de cada campo y sus opciones:
 
-Usa esta información para:
-1. Asignar `priority_resolved` al valor válido más cercano
-2. Asignar `size` al valor válido más cercano
-3. Asignar `status` al valor válido más cercano (default: "Todo")
+Ejemplo de output:
+```json
+{
+  "fields": {
+    "Status": {"type": "single_select", "options": ["Todo", "In Progress", "Done"]},
+    "Priority": {"type": "single_select", "options": ["P0", "P1", "P2", "P3", "P4"]},
+    "Size": {"type": "single_select", "options": ["XS", "S", "M", "L", "XL"]},
+    "Estimate": {"type": "number"}
+  }
+}
+```
 
-Si no hay un valor cercano, preguntar al usuario.
+#### 5.2.6 Generar project_fields solo con fields relevantes
+
+NO incluyas todos los campos del project. Solo los que aplican en la creación del issue:
+
+| Campo del project | ¿Incluir? | Valor |
+|-------------------|:----------:|-------|
+| Status | ✅ Siempre | "Todo" por defecto |
+| Priority | ✅ Si existe | Mapear desde `priority_resolved` |
+| Size | ✅ Si existe | Mapear desde `size` |
+| Estimate | ✅ Si existe | Mapear desde `estimate_hours` |
+| Iteración/Sprint | ❌ | No aplica en creación |
+| Start date / End date | ❌ | No aplica en creación |
+| Reviewers, etc. | ❌ | No aplica en creación |
+
+Para los fields que incluyas, USA EL NOMBRE EXACTO que devuelve `gh_project_fields.py`. No traduzcas ni inventes nombres.
+
+Mapeo de valores internos del analyzer → project fields:
+- `status` → al field que se llame "Status" (o similar, como "Estado")
+- `priority_resolved` → al field que se llame "Priority" (o similar, como "Prioridad")
+- `size` → al field que se llame "Size" (o similar, como "Tamaño")
+- `estimate_hours` → al field que se llame "Estimate" (o similar, como "Estimación")
+
+Valida que el valor esté entre las opciones del project. Si no está, elige el más cercano.
+
+Guarda el resultado en:
+```json
+"project_fields": {
+  "Status": "Todo",
+  "Priority": "P2",
+  "Size": "M",
+  "Estimate": 8
+}
+```
 
 #### 5.2 Determinar project destino
 ```bash
@@ -223,13 +259,22 @@ uv run python3 scripts/gh_upload_images.py --repo "$REPO" --issue "<número>" --
 (El número de issue se obtiene después de crear, así que esta parte
 la hará el creator. Pero el analyzer debe dejar las imágenes listas.)
 
-#### 5.6 Agregar status y prioridad para el project
+#### 5.6 Agregar project_fields al JSON
+
+Una vez determinados los valores de Status, Priority, Size y Estimate,
+guárdalos en un objeto `project_fields` con los nombres EXACTOS del project:
+
 ```json
-{
-  "status": "Todo",
-  "priority_resolved": "High"
+"project_fields": {
+  "Status": "Todo",
+  "Priority": "P2",
+  "Size": "M",
+  "Estimate": 8
 }
 ```
+
+Los nombres de las keys deben coincidir EXACTAMENTE con los que devuelve
+`gh_project_fields.py`. No los traduzcas ni uses nombres fijos.
 
 #### 5.7 Guardar cada JSON enriquecido
 
@@ -240,10 +285,7 @@ con todos los campos nuevos.
 - `target_repo`: string — repo donde crear el issue
 - `target_project`: number — proyecto donde agregarlo
 - `labels_resolved`: string[] — labels que YA EXISTEN en el repo
-- `size`: string — inferido si faltaba
-- `estimate_hours`: number — inferido si faltaba
-- `status`: string — "Todo" por defecto
-- `priority_resolved`: string — prioridad para el campo del project
+- `project_fields`: object — campos del project con sus valores (Status, Priority, Size, Estimate según apliquen)
 
 ## Reglas
 

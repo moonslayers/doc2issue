@@ -58,6 +58,7 @@ Esto genera `output/<archivo>.manifest.json` con estos campos:
     }
   ],
   "stakeholders": ["string"],
+  "project_fields": {},  // << objeto dinámico: el analyzer lo llena con los nombres reales del project
   "questions_for_pm": ["string"]
 }
 ```

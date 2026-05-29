@@ -21,7 +21,11 @@ gh issue create --repo <target_repo> --title "..." --body-file output/archivo.bo
 uv run python3 scripts/gh_upload_images.py --repo <target_repo> --issue <N> --images '["img1.png"]'
 uv run python3 scripts/embed_images.py output/archivo.issue.json
 gh issue edit <N> --repo <target_repo> --body-file output/archivo.body.md
-uv run python3 scripts/gh_project_set_fields.py --project <N> --owner <owner> --item-number <N> --repo <target_repo> --fields '{"Status":"Todo"}'
+# Los fields se toman DINÁMICAMENTE del project_fields en el JSON.
+# El analyzer deja project_fields con los nombres EXACTOS del project.
+# NO hardcodees nombres de campos aquí.
+FIELDS=$(python3 -c "import json; print(json.dumps(json.load(open('archivo.issue.json')).get('project_fields', {})))")
+uv run python3 scripts/gh_project_set_fields.py --project <N> --owner <owner> --item-number <N> --repo <target_repo> --fields "$FIELDS"
 ```
 
 ## Scripts disponibles
@@ -40,7 +44,7 @@ Los espacios se URL-encodean automáticamente. Si la imagen no se ve, esperar CD
 ## Verificación post-creación
 1. ✅ Abrir URL del issue y verificar imágenes
 2. ✅ Verificar labels asignados
-3. ✅ Verificar campos del project (Status, Priority, Size)
+3. ✅ Verificar campos del project (los que vienen en project_fields del JSON)
 
 ## Troubleshooting
 

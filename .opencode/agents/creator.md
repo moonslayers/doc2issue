@@ -50,13 +50,28 @@ Recibes un JSON ya enriquecido por el analyzer. Creas el issue en 2 fases para e
    gh issue edit <NÚMERO> --repo <target_repo> \
      --body-file output/<nombre>.body.md
    ```
-9. Agregar a proyecto y setear campos:
+9. Agregar a proyecto y setear campos (dinámico desde project_fields):
    ```bash
-   uv run python3 scripts/gh_project_set_fields.py \
-     --project <target_project> --owner <owner> \
-     --item-number <NÚMERO> --repo <target_repo> \
-     --fields '{"Status":"<status>","Priority":"<priority_resolved>","Size":"<size>","Estimate":<estimate_hours>}'
+   # Leer project_fields del JSON y pasarlos dinámicamente al script
+   # Usa TODAS las keys que tenga project_fields, sin hardcodear nombres
+   FIELDS=$(python3 -c "
+   import json, sys
+   data = json.load(open('output/<nombre>.issue.json'))
+   pf = data.get('project_fields', {})
+   if not pf:
+       sys.exit(0)
+   print(json.dumps(pf))
+   ")
+   if [ -n "$FIELDS" ]; then
+     uv run python3 scripts/gh_project_set_fields.py \
+       --project <target_project> --owner <owner> \
+       --item-number <NÚMERO> --repo <target_repo> \
+       --fields "$FIELDS"
+   fi
    ```
+   > Los nombres de los fields vienen EXACTAMENTE del project (Status, Priority, Size, Estimate, etc.)
+   > NO inventes ni hardcodees nombres de campos.
+
 10. Retornar la URL del issue creado.
 
 ## Reglas
