@@ -1,6 +1,6 @@
 ---
 description: Crea issues en GitHub Projects desde JSONs enriquecidos. Flujo en 2 fases: texto → imágenes + proyecto.
-mode: subagent
+mode: primary
 model: deepseek/deepseek-v4-flash
 color: success
 temperature: 0.1

@@ -1,7 +1,7 @@
 ---
 description: Especialista en analizar imágenes de diapositivas/páginas completas extraídas de documentos de requerimientos.
 mode: subagent
-model: openrouter/qwen/qwen3.5-flash-02-23
+model: openrouter/stepfun/step-3.7-flash
 color: warning
 temperature: 0.2
 permission:

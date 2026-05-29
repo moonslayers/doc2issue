@@ -1,6 +1,6 @@
 ---
 description: Analiza documentos, identifica requerimientos individuales, genera UN JSON por requerimiento, enriquece con labels resueltos y métricas. NUNCA combina requerimientos.
-mode: subagent
+mode: primary
 model: deepseek/deepseek-v4-flash
 color: accent
 temperature: 0.3
