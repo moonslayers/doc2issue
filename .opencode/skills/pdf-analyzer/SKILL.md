@@ -5,17 +5,17 @@ description: "Use when processing `.pdf` files in `docs/`. Extract text and imag
 # PDF Analyzer
 
 ## Input
-- **Archivo**: `docs/<archivo>.pdf`
+- **Archivo**: `docs/<proyecto>/<archivo>.pdf`
 - **Script**: `scripts/extract_pdf.py`
 - **Dependencias**: `pymupdf` (instalado vía `uv sync` (ver pyproject.toml) pymupdf`)
 
 ## Extracción
 ```bash
-uv run python3 scripts/extract_pdf.py docs/archivo.pdf
+uv run python3 scripts/extract_pdf.py "docs/<proyecto>/<archivo>.pdf" "output/issues/<proyecto>/data"
 ```
-Esto genera `output/<archivo>.manifest.json` con estos campos:
-- `text_file`: ruta al archivo .txt con el texto extraído
-- `images[]`: lista de rutas a imágenes extraídas
+Esto genera `output/issues/<proyecto>/data/<archivo>.manifest.json` con estos campos:
+- `text_file`: ruta al archivo .txt con el texto extraído (`output/issues/<proyecto>/data/<archivo>.txt`)
+- `images[]`: lista de rutas a imágenes extraídas (`output/issues/<proyecto>/data/images/...`)
 - `pages`: número de páginas
 - `char_count`: total de caracteres extraídos
 
@@ -42,7 +42,7 @@ Esto genera `output/<archivo>.manifest.json` con estos campos:
 ## Output contract
 ```json
 {
-  "source": "docs/requerimiento.pdf",
+  "source": "docs/<proyecto>/requerimiento.pdf",
   "title": "string (requerido)",
   "description": "string (requerido)",
   "acceptance_criteria": ["string"],
@@ -70,7 +70,7 @@ Vincular este documento con otros archivos relacionados:
 ```json
 {
   "references": [
-    {"type": "data", "path": "output/archivo.batch.json", "description": "Datos relacionados"}
+    {"type": "data", "path": "output/issues/<proyecto>/data/archivo.batch.json", "description": "Datos relacionados"}
   ]
 }
 ```
@@ -85,16 +85,16 @@ Vincular este documento con otros archivos relacionados:
 | **Multi-idioma** | Extraer todo el texto, mantener idioma original |
 
 ## Validación del output
-- `source` debe existir en disco
+- `source` debe existir en disco (ej: `docs/<proyecto>/archivo.pdf`)
 - `title` no puede estar vacío
 - Cada `images[].path` debe existir en disco (si no, sacarlo del array)
 - `char_count > 0` (si es 0, activar edge case de escaneado)
 
 ## Ejemplo concreto
 ```
-docs/login-oauth.pdf
-→ uv run python3 scripts/extract_pdf.py docs/login-oauth.pdf
-→ manifest: 3 páginas, 2 imágenes
+docs/mi-proyecto/login-oauth.pdf
+→ uv run python3 scripts/extract_pdf.py "docs/mi-proyecto/login-oauth.pdf" "output/issues/mi-proyecto/data"
+→ manifest: 3 páginas, 2 imágenes (en output/issues/mi-proyecto/data/)
 → analyzer extrae: title="Login con Google OAuth", description="..."
-→ JSON final guardado en output/login-oauth.issue.json
+→ JSON final guardado en output/issues/mi-proyecto/login-oauth.issue.json
 ```

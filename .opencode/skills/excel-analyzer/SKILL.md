@@ -5,20 +5,20 @@ description: "Use for `.xlsx`, `.xls`, `.csv` files in `docs/`. Convert tabular 
 # Excel Analyzer
 
 ## Input
-- **Archivo**: `docs/<archivo>.xlsx`, `.xls`, o `.csv`
+- **Archivo**: `docs/<proyecto>/<archivo>.xlsx`, `.xls`, o `.csv`
 - **Script**: `scripts/extract_xlsx.py`
 - **Dependencias**: `pandas`, `openpyxl` (instalado vía `uv sync` (ver pyproject.toml) pandas openpyxl`)
 
 ## Extracción
 ```bash
-uv run python3 scripts/extract_xlsx.py docs/archivo.xlsx
+uv run python3 scripts/extract_xlsx.py "docs/<proyecto>/<archivo>.xlsx" "output/issues/<proyecto>/data"
 ```
-Esto genera `output/<archivo>.batch.json` con:
+Esto genera `output/issues/<proyecto>/data/<archivo>.batch.json` con:
 - `rows[]`: array de objetos, cada fila del Excel es un registro
 - `count`: número total de filas
 - `type`: "xlsx" o "csv"
 
-También genera `output/<archivo>.manifest.json` para consistencia con los otros formatos.
+También genera `output/issues/<proyecto>/data/<archivo>.manifest.json` para consistencia con los otros formatos.
 
 ## Reglas de negocio (mapeo de columnas)
 
@@ -47,7 +47,7 @@ Cada fila se convierte en un objeto dentro de `rows[]`. Luego el analyzer genera
 
 ```json
 {
-  "source": "docs/backlog.xlsx",
+  "source": "docs/<proyecto>/backlog.xlsx",
   "title": "string (de la columna Title)",
   "description": "string (de la columna Description)",
   "priority": "string",
@@ -65,7 +65,7 @@ Vincular este documento con otros archivos relacionados:
 ```json
 {
   "references": [
-    {"type": "data", "path": "output/archivo.batch.json", "description": "Datos relacionados"}
+    {"type": "data", "path": "output/issues/<proyecto>/data/archivo.batch.json", "description": "Datos relacionados"}
   ]
 }
 ```
@@ -86,9 +86,9 @@ Vincular este documento con otros archivos relacionados:
 
 ## Ejemplo concreto
 ```
-docs/backlog-sprint-24.xlsx
-→ uv run python3 scripts/extract_xlsx.py docs/backlog-sprint-24.xlsx
-→ batch.json: 15 filas con columnas Title, Description, Priority, Size
+docs/mi-proyecto/backlog-sprint-24.xlsx
+→ uv run python3 scripts/extract_xlsx.py "docs/mi-proyecto/backlog-sprint-24.xlsx" "output/issues/mi-proyecto/data"
+→ batch.json: 15 filas con columnas Title, Description, Priority, Size (en output/issues/mi-proyecto/data/)
 → analyzer genera 15 issues, uno por fila
-→ JSON batch en output/backlog-sprint-24.batch.json
+→ JSONs en output/issues/mi-proyecto/backlog-sprint-24_N.issue.json
 ```

@@ -15,13 +15,15 @@ permission:
 
 Recibes un JSON ya enriquecido por el analyzer. Creas el issue en 2 fases para evitar el límite de 65KB de GitHub.
 
+> El JSON está en `output/issues/<proyecto>/<archivo>.issue.json`. Usa esa ruta para todos los comandos.
+
 ## Flujo
 
 ### Fase 1: Crear issue (solo texto)
-1. Leer el JSON de `output/<nombre>.issue.json`
+1. Leer el JSON de `output/issues/<proyecto>/<nombre>.issue.json`
 2. Generar body solo texto:
    ```bash
-   uv run python3 scripts/embed_images.py output/<nombre>.issue.json --text-only
+   uv run python3 scripts/embed_images.py "output/issues/<proyecto>/<nombre>.issue.json" --text-only
    ```
 3. Mostrar preview y pedir confirmación
 4. Crear issue (body ~2KB):
@@ -29,7 +31,7 @@ Recibes un JSON ya enriquecido por el analyzer. Creas el issue en 2 fases para e
    gh issue create \
      --repo <target_repo> \
      --title "TÍTULO" \
-     --body-file output/<nombre>.body.md \
+     --body-file "output/issues/<proyecto>/<nombre>.body.md" \
      --label "$(echo <labels_resolved> | tr ',' ',')"
    ```
 5. Guardar el número del issue creado
@@ -43,12 +45,12 @@ Recibes un JSON ya enriquecido por el analyzer. Creas el issue en 2 fases para e
    ```
 7. Generar body completo (embed_images.py usará las rutas ya reemplazadas por URLs):
    ```bash
-   uv run python3 scripts/embed_images.py output/<nombre>.issue.json
+   uv run python3 scripts/embed_images.py "output/issues/<proyecto>/<nombre>.issue.json"
    ```
 8. Actualizar el issue con el body completo:
    ```bash
    gh issue edit <NÚMERO> --repo <target_repo> \
-     --body-file output/<nombre>.body.md
+     --body-file "output/issues/<proyecto>/<nombre>.body.md"
    ```
 9. Agregar a proyecto y setear campos (dinámico desde project_fields):
    ```bash
@@ -56,7 +58,7 @@ Recibes un JSON ya enriquecido por el analyzer. Creas el issue en 2 fases para e
    # Usa TODAS las keys que tenga project_fields, sin hardcodear nombres
    FIELDS=$(python3 -c "
    import json, sys
-   data = json.load(open('output/<nombre>.issue.json'))
+    data = json.load(open('output/issues/<proyecto>/<nombre>.issue.json'))
    pf = data.get('project_fields', {})
    if not pf:
        sys.exit(0)

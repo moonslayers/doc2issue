@@ -5,18 +5,18 @@ description: "Use for `.pptx` files in `docs/`. Extract slides, presenter notes 
 # PPT Analyzer
 
 ## Input
-- **Archivo**: `docs/<archivo>.pptx`
+- **Archivo**: `docs/<proyecto>/<archivo>.pptx`
 - **Script**: `scripts/extract_pptx.py`
 - **Dependencias**: `python-pptx` (instalado vía `uv sync` (ver pyproject.toml) python-pptx`)
 
 ## Extracción
 ```bash
-uv run python3 scripts/extract_pptx.py docs/archivo.pptx
+uv run python3 scripts/extract_pptx.py "docs/<proyecto>/<archivo>.pptx" "output/issues/<proyecto>/data"
 ```
-Esto genera `output/<archivo>.manifest.json` con estos campos:
-- `markdown_file`: ruta al .md con texto de slides + notas del presentador
+Esto genera `output/issues/<proyecto>/data/<archivo>.manifest.json` con estos campos:
+- `markdown_file`: ruta al .md con texto de slides + notas del presentador (`output/issues/<proyecto>/data/<archivo>.md`)
 - `slides`: número total de slides
-- `images[]`: lista de rutas a imágenes extraídas
+- `images[]`: lista de rutas a imágenes extraídas (`output/issues/<proyecto>/data/images/...`)
 
 ## Reglas de negocio (qué buscar en el texto)
 
@@ -39,7 +39,7 @@ Esto genera `output/<archivo>.manifest.json` con estos campos:
 ## Output contract
 ```json
 {
-  "source": "docs/presentacion.pptx",
+  "source": "docs/<proyecto>/presentacion.pptx",
   "title": "string (requerido)",
   "description": "string (requerido)",
   "acceptance_criteria": ["string"],
@@ -67,7 +67,7 @@ Vincular este documento con otros archivos relacionados:
 ```json
 {
   "references": [
-    {"type": "data", "path": "output/archivo.batch.json", "description": "Datos relacionados"}
+    {"type": "data", "path": "output/issues/<proyecto>/data/archivo.batch.json", "description": "Datos relacionados"}
   ]
 }
 ```
@@ -86,9 +86,9 @@ Vincular este documento con otros archivos relacionados:
 
 ## Ejemplo concreto
 ```
-docs/dashboard-feature.pptx
-→ uv run python3 scripts/extract_pptx.py docs/dashboard-feature.pptx
-→ manifest: 12 slides, 5 imágenes, notas del slide 8 tienen detalles técnicos
+docs/mi-proyecto/dashboard-feature.pptx
+→ uv run python3 scripts/extract_pptx.py "docs/mi-proyecto/dashboard-feature.pptx" "output/issues/mi-proyecto/data"
+→ manifest: 12 slides, 5 imágenes (en output/issues/mi-proyecto/data/), notas del slide 8 tienen detalles técnicos
 → title="Nuevo Dashboard", description incluye notas del presentador
-→ JSON en output/dashboard-feature.issue.json
+→ JSON en output/issues/mi-proyecto/dashboard-feature.issue.json
 ```

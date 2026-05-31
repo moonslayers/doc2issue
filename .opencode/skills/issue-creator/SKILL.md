@@ -12,19 +12,19 @@ Crear issues en GitHub Projects desde JSONs enriquecidos. Flujo en 2 fases para 
 
 ## Fase 1: Crear issue (solo texto)
 ```bash
-uv run python3 scripts/embed_images.py output/archivo.issue.json --text-only
-gh issue create --repo <target_repo> --title "..." --body-file output/archivo.body.md --label "lab1,lab2"
+uv run python3 scripts/embed_images.py "output/issues/<proyecto>/<archivo>.issue.json" --text-only
+gh issue create --repo <target_repo> --title "..." --body-file "output/issues/<proyecto>/<archivo>.body.md" --label "lab1,lab2"
 ```
 
 ## Fase 2: Imágenes + proyecto
 ```bash
 uv run python3 scripts/gh_upload_images.py --repo <target_repo> --issue <N> --images '["img1.png"]'
-uv run python3 scripts/embed_images.py output/archivo.issue.json
-gh issue edit <N> --repo <target_repo> --body-file output/archivo.body.md
+uv run python3 scripts/embed_images.py "output/issues/<proyecto>/<archivo>.issue.json"
+gh issue edit <N> --repo <target_repo> --body-file "output/issues/<proyecto>/<archivo>.body.md"
 # Los fields se toman DINÁMICAMENTE del project_fields en el JSON.
 # El analyzer deja project_fields con los nombres EXACTOS del project.
 # NO hardcodees nombres de campos aquí.
-FIELDS=$(python3 -c "import json; print(json.dumps(json.load(open('archivo.issue.json')).get('project_fields', {})))")
+FIELDS=$(python3 -c "import json; print(json.dumps(json.load(open('output/issues/<proyecto>/<archivo>.issue.json')).get('project_fields', {})))")
 uv run python3 scripts/gh_project_set_fields.py --project <N> --owner <owner> --item-number <N> --repo <target_repo> --fields "$FIELDS"
 ```
 

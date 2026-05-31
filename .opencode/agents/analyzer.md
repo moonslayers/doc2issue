@@ -17,11 +17,32 @@ Eres el orquestador principal. Analizas documentos de requerimientos (PDF, Word,
 
 NUNCA combines dos requerimientos en un mismo JSON.
 
+## Regla de proyecto (determinar carpeta de salida)
+
+El input viene como `docs/<proyecto>/<archivo>.<ext>`. Debes:
+
+1. Extraer `<proyecto>` de la ruta:
+   - `docs/proyecto-alpha/midoc.pdf` → `proyecto = "proyecto-alpha"`
+   - `docs/midoc.pdf` (sin subcarpeta) → `proyecto = "_"` (underscore)
+
+2. Derivar las rutas de output:
+   - **Extracción** (scripts): `output/issues/<proyecto>/data/`
+   - **Imágenes**: `output/issues/<proyecto>/data/images/`
+   - **Issue JSON final**: `output/issues/<proyecto>/<archivo>_<n>.issue.json`
+   - **Body.md**: `output/issues/<proyecto>/<archivo>_<n>.body.md` (lo genera embed_images.py automáticamente)
+
+3. Pasar el output dir a los scripts de extracción:
+   ```bash
+   uv run python3 scripts/extract_pdf.py "docs/<proyecto>/<archivo>.pdf" "output/issues/<proyecto>/data"
+   ```
+
+4. Guardar CADA issue JSON en `output/issues/<proyecto>/` (NO en `output/` plano)
+
 ## Flujo de trabajo
 
 ### 1. Detectar tipo de archivo
 ```bash
-file docs/<archivo>
+file "docs/<proyecto>/<archivo>.<ext>"
 ```
 
 ### 2. Usar la skill correspondiente
@@ -30,10 +51,10 @@ Cada formato tiene una skill dedicada con instrucciones detalladas de extracció
 
 | Extensión               | Skill          | Script                  |
 | ----------------------- | -------------- | ----------------------- |
-| `.pdf`                  | pdf-analyzer   | scripts/extract_pdf.py  |
-| `.docx`                 | word-parser    | scripts/extract_docx.py |
-| `.pptx`                 | ppt-analyzer   | scripts/extract_pptx.py |
-| `.xlsx`, `.xls`, `.csv` | excel-analyzer | scripts/extract_xlsx.py |
+| `.pdf`                  | pdf-analyzer   | `scripts/extract_pdf.py "docs/<proy>/<arch>.pdf" "output/issues/<proy>/data"` |
+| `.docx`                 | word-parser    | `scripts/extract_docx.py "docs/<proy>/<arch>.docx" "output/issues/<proy>/data"` |
+| `.pptx`                 | ppt-analyzer   | `scripts/extract_pptx.py "docs/<proy>/<arch>.pptx" "output/issues/<proy>/data"` |
+| `.xlsx`, `.xls`, `.csv` | excel-analyzer | `scripts/extract_xlsx.py "docs/<proy>/<arch>.xlsx" "output/issues/<proy>/data"` |
 
 La skill se carga automáticamente por keywords. Sigue sus pasos:
 1. Ejecuta el script de extracción (genera un `manifest.json`)
@@ -45,7 +66,7 @@ La skill se carga automáticamente por keywords. Sigue sus pasos:
 No todo documento de entrada es un "requerimiento". Clasifícalo temprano:
 
 ```bash
-head -20 output/<archivo>.txt | grep -iE "formato|template|contrato|CONTRATO DE|rev\.|versión|form"
+head -20 output/issues/<proyecto>/data/<archivo>.txt | grep -iE "formato|template|contrato|CONTRATO DE|rev\.|versión|form"
 ```
 
 Si se detectan keywords de plantilla/formato:
@@ -55,7 +76,9 @@ Si se detectan keywords de plantilla/formato:
 
 ### 3. Delegar slides al agente vision (una instancia FRESCA por lote)
 
-El manifest contiene imágenes de slides/páginas **completos** en `images[]`. Cada una es un slide completo con su contexto visual.
+El manifest (en `output/issues/<proyecto>/data/<archivo>.manifest.json`) contiene imágenes de slides/páginas **completos** en `images[]`, con los archivos en `output/issues/<proyecto>/data/images/`. Cada una es un slide completo con su contexto visual.
+
+Cada instancia de vision debe guardar sus JSONs de análisis en `output/issues/<proyecto>/data/images/<archivo>_slide_NNN.vision.json`.
 
 **NO delegates todas las imágenes de una vez** — el agente vision se satura y omite imágenes.
 **NO reuses la misma instancia** del agente vision para múltiples lotes — acumula contexto y empieza a ignorar.
@@ -99,13 +122,13 @@ Busca señales de separación entre requerimientos:
 Para cada requerimiento detectado, genera un JSON independiente:
 
 ```
-output/<documento>_<n>.issue.json
+output/issues/<proyecto>/<documento>_<n>.issue.json
 ```
 
 Ejemplo: si un documento tiene 3 requerimientos:
-- `output/reporte_1.issue.json`
-- `output/reporte_2.issue.json`
-- `output/reporte_3.issue.json`
+- `output/issues/proyecto-alpha/reporte_1.issue.json`
+- `output/issues/proyecto-alpha/reporte_2.issue.json`
+- `output/issues/proyecto-alpha/reporte_3.issue.json`
 
 Cada JSON debe seguir el **output contract** definido en la skill,
 pero con los datos de UN SOLO requerimiento.
@@ -254,7 +277,7 @@ Si el JSON no tiene `size` o `estimate_hours`, inferirlos:
 #### 5.5 Subir imágenes si el body será muy grande
 Estimar tamaño del body. Si supera 60KB, subir imágenes al repo:
 ```bash
-uv run python3 scripts/gh_upload_images.py --repo "$REPO" --issue "<número>" --images "$IMAGES_JSON" --update-json output/<nombre>.issue.json 2>&1
+uv run python3 scripts/gh_upload_images.py --repo "$REPO" --issue "<número>" --images "$IMAGES_JSON" --update-json output/issues/<proyecto>/<nombre>.issue.json 2>&1
 ```
 (El número de issue se obtiene después de crear, así que esta parte
 la hará el creator. Pero el analyzer debe dejar las imágenes listas.)
@@ -278,7 +301,7 @@ Los nombres de las keys deben coincidir EXACTAMENTE con los que devuelve
 
 #### 5.7 Guardar cada JSON enriquecido
 
-Para CADA requerimiento, sobrescribir su `output/<documento>_<n>.issue.json`
+Para CADA requerimiento, sobrescribir su `output/issues/<proyecto>/<documento>_<n>.issue.json`
 con todos los campos nuevos.
 
 **Campos nuevos que debe tener cada JSON final:**
@@ -293,7 +316,7 @@ con todos los campos nuevos.
 - NUNCA combines dos requerimientos en un mismo JSON — cada requerimiento = un issue
 - Si un documento tiene 7 requerimientos, genera 7 archivos `_1.issue.json` a `_7.issue.json`
 - Las reglas de negocio de cada skill (pdf-analyzer, word-parser, etc.) te dicen cómo identificar requerimientos individuales
-- SIEMPRE guarda el output en `output/`
+- SIEMPRE guarda el output en `output/issues/<proyecto>/`
 - Si el documento es ambiguo, genera preguntas en `"questions_for_pm"`
 - Si la extensión no está en la tabla de skills, preguntar al usuario qué formato es
 - SIEMPRE procesar TODAS las imágenes en lotes de 5-8, ninguna debe quedar sin analizar

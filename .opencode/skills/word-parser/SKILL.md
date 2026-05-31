@@ -5,17 +5,17 @@ description: "Use for `.docx` files in `docs/`. Convert to Markdown and extract 
 # Word Parser
 
 ## Input
-- **Archivo**: `docs/<archivo>.docx`
+- **Archivo**: `docs/<proyecto>/<archivo>.docx`
 - **Script**: `scripts/extract_docx.py`
 - **Dependencias**: `mammoth`, `python-docx` (instalado vía `uv sync` (ver pyproject.toml) mammoth python-docx`)
 
 ## Extracción
 ```bash
-uv run python3 scripts/extract_docx.py docs/archivo.docx
+uv run python3 scripts/extract_docx.py "docs/<proyecto>/<archivo>.docx" "output/issues/<proyecto>/data"
 ```
-Esto genera `output/<archivo>.manifest.json` con estos campos:
-- `markdown_file`: ruta al archivo .md convertido
-- `images[]`: lista de rutas a imágenes extraídas
+Esto genera `output/issues/<proyecto>/data/<archivo>.manifest.json` con estos campos:
+- `markdown_file`: ruta al archivo .md convertido (`output/issues/<proyecto>/data/<archivo>.md`)
+- `images[]`: lista de rutas a imágenes extraídas (`output/issues/<proyecto>/data/images/...`)
 - `warnings[]`: advertencias de conversión
 
 ## Reglas de negocio (qué buscar en el texto)
@@ -40,7 +40,7 @@ Esto genera `output/<archivo>.manifest.json` con estos campos:
 ## Output contract
 ```json
 {
-  "source": "docs/requerimiento.docx",
+  "source": "docs/<proyecto>/requerimiento.docx",
   "title": "string (requerido)",
   "description": "string (requerido)",
   "acceptance_criteria": ["string"],
@@ -68,7 +68,7 @@ Vincular este documento con otros archivos relacionados:
 ```json
 {
   "references": [
-    {"type": "data", "path": "output/archivo.batch.json", "description": "Datos relacionados"}
+    {"type": "data", "path": "output/issues/<proyecto>/data/archivo.batch.json", "description": "Datos relacionados"}
   ]
 }
 ```
@@ -83,13 +83,13 @@ Vincular este documento con otros archivos relacionados:
 ## Validación del output
 - `source` debe existir en disco
 - `title` no puede estar vacío
-- `markdown_file` debe existir (según manifest)
+- `markdown_file` debe existir en `output/issues/<proyecto>/data/` (según manifest)
 
 ## Ejemplo concreto
 ```
-docs/especificacion-pagos.docx
-→ uv run python3 scripts/extract_docx.py docs/especificacion-pagos.docx
-→ manifest: markdown_file, 0 imágenes
+docs/mi-proyecto/especificacion-pagos.docx
+→ uv run python3 scripts/extract_docx.py "docs/mi-proyecto/especificacion-pagos.docx" "output/issues/mi-proyecto/data"
+→ manifest: markdown_file, 0 imágenes (en output/issues/mi-proyecto/data/)
 → title="Especificación Módulo de Pagos", description="..."
-→ JSON en output/especificacion-pagos.issue.json
+→ JSON en output/issues/mi-proyecto/especificacion-pagos.issue.json
 ```
